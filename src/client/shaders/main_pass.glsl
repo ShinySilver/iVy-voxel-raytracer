@@ -85,55 +85,34 @@ void main() {
     // if the ray intersect the world volume, raytrace
     Node current_node = node_pool[0];
     uint hit = 0, steps = 0;
-    //#if true
     if (intersect >= 0) {
         // first, reach the ray initial position on the edge of the world volume
-        hit = 1;
         uint node_width = uint(world_width);
         bool is_terminal = (current_node.header & (0x1u << 30)) != 0;
         bool is_lod = (current_node.header & (0x1u << 31)) != 0;
         bool has_child;
-        while(!is_terminal && !is_lod && steps < 16) {
+        while(!is_terminal && steps < 1) {
+            hit = 1;
             steps+=1;
             node_width /= NODE_WIDTH;
-            uvec3 v = uvec3(ceil(ray_pos / float(node_width)));
-            has_child = ((current_node.bitmask & (0x1 << v)) != 0);
+            uvec3 v = uvec3(floor(ray_pos / float(node_width)));
+            has_child = ((current_node.bitmask & (0x1ul << (v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH))) != 0);
             if(!has_child) break;
-            uint64_t filtered = current_node.bitmask & (U64_MAX >> (64 - v.y - v.x * NODE_WIDTH - v.z * NODE_WIDTH * NODE_WIDTH));
-            uint hit_index = bitCount(uint(filtered)) + bitCount(uint(filtered >> 32)) - 1; // Child with id 1 has index 0
+            uint64_t filtered = current_node.bitmask & (U64_MAX >> (64 - v.x - v.y * NODE_WIDTH - v.z * NODE_WIDTH * NODE_WIDTH));
+            uint hit_index = uint(bitCount(uint(filtered)) + bitCount(uint(filtered >> 32))); // Child with id 1 has index 0
             hit_index += (current_node.header & 0x3fffffffu)/SIZEOF_NODE; // must be a node array as it is not terminal
-            current_node = node_pool[hit_index];
+            current_node = node_pool[int(hit_index)];
             is_lod = (current_node.header & (0x1u << 31)) != 0;
             is_terminal = (current_node.header & (0x1u << 30)) != 0;
-            hit = 1+hit%3;
         }
-
-        // Now that the ray found its initial location, we check if it's solid. If it is, we don't have any traversal to do
-        uvec3 v = uvec3(floor(mod(ray_pos, node_width)*NODE_WIDTH/float(node_width)));
-        bool is_solid = (current_node.bitmask & (U64_MAX >> (64 - v.x - v.y * NODE_WIDTH - v.z * NODE_WIDTH * NODE_WIDTH))) != 0;
-        if(is_solid){
-            // The ray initial location was found to be solid, so we can just extract the material
-            if(is_lod){
-                // Case one: this is a LOD chunk, where the (uniform) material is stored in the header
-            }else{
-                // Case two: this is a normal chunk, the material is stored in the voxel pool
-                //uint64_t filtered = current_node.bitmask & ~(~0x0ul  << (v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH));
-                //uint hit_index = bitCount(uint(filtered)) + bitCount(uint(filtered >> 32));
-                //uint voxel_addressing_space = current_node.header & 0x3fffu;
-                //hit = uint(voxel_pool[voxel_addressing_space+hit_index]);
-            }
-        }else{
-            // The ray initial location was found to be air, so we have to traverse the volume with tree-dda
-            // WHILE TRUE
-            // call the bitmask_dda function to trace through the current node
-            // if the bitmask_dda function got the ray out of the world volume, break.
-            // if the bitmask_dda function does NOT return a hit, update ray position, change current node & reduce depth and step size & *continue*
-            // if the bitmask_dda function does return a hit & we are at max depth, *return* the hit color
-            // if the bitmask_dda function does return a hit & we are NOT at max depth, change current node & go deeper depth and step size, and *continue*
-            // END-WHILE
+        if(has_child){
+            hit = 2;
+            node_width /= NODE_WIDTH;
+            uvec3 v = uvec3(floor(ray_pos / float(node_width)));
+            bool is_solid = (current_node.bitmask & (0x1ul << (v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH))) != 0;
+            if(is_solid) hit = 3;
         }
     }
-    //#endif
 
     // If there was a hit, we extract the color from the last node & voxel pool
     if(hit > 0){

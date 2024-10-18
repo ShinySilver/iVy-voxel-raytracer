@@ -33,7 +33,13 @@ void client::world_view::init() {
     WorldView.region = server::worldgen::generate_region(0, 0, 0);
     WorldView.dirty = true;
     info("Done generating after %.2f ms!", double (time_us()-t0)/1e3);
-    debug("Root node has bitmask 0x%lx", *((uint64_t *) memory_pool.to_pointer(WorldView.region->get_root_node())));
+    debug("Root node has bitmask 0x%lx and header 0x%x",
+          *((uint64_t *) memory_pool.to_pointer(WorldView.region->get_root_node())),
+          *(((uint32_t *) memory_pool.to_pointer(WorldView.region->get_root_node())) + 2));
+    debug("For reference, node 0x%x has bitmask 0x%lx and header 0x%x",
+          *(((uint32_t *) memory_pool.to_pointer(WorldView.region->get_root_node())) + 2),
+          *((uint64_t *) memory_pool.to_pointer(*(((uint32_t *) memory_pool.to_pointer(WorldView.region->get_root_node())) + 2))),
+          *(((uint32_t *) memory_pool.to_pointer(*(((uint32_t *) memory_pool.to_pointer(WorldView.region->get_root_node())) + 2))) + 2));
 
 
     // Creating the buffer that will receive the WorldView data

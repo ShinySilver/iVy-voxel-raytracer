@@ -1,14 +1,16 @@
 #include <chrono>
 #include "camera.h"
 #include "glm/gtc/matrix_transform.hpp"
+#include "../common/world.h"
 
 namespace client::camera {
-    glm::vec3 position{0.5, 0.5, 0.5}, direction{1.0f, 0, 0};
+    glm::vec3 position{-IVY_REGION_WIDTH, -IVY_REGION_WIDTH, -IVY_REGION_WIDTH}, direction{0.5f, 0.5f, 0.5f};
     glm::mat4 view_matrix{};
 }
 
-#define CAMERA_BASE_SPEED (50.f)
-#define CAMERA_FAST_SPEED (250.f)
+#define CAMERA_BASE_SPEED (250.f)
+#define CAMERA_FAST_SPEED (1000.f)
+#define CAMERA_SPEED_MODIFIER (0.1f)
 #define CAMERA_MOUSE_SENSITIVITY (3)
 
 void client::camera::update(GLFWwindow *window) {
@@ -17,7 +19,7 @@ void client::camera::update(GLFWwindow *window) {
     float delta_time = std::chrono::duration<float>(t1 - t0).count();
     t0 = t1;
 
-    float speed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? CAMERA_FAST_SPEED : CAMERA_BASE_SPEED;
+    float speed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? CAMERA_FAST_SPEED * CAMERA_SPEED_MODIFIER : CAMERA_BASE_SPEED * CAMERA_SPEED_MODIFIER;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) position += direction * delta_time * speed;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) position -= direction * delta_time * speed;
 

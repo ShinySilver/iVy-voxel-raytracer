@@ -17,8 +17,6 @@ private:
     void *next;       // Pointer to the next free address in the pool
     size_t max_size;  // Maximum size of the memory pool
     size_t chunk_size;
-public:
-    size_t get_chunk_size() const;
 private:
     // Size of each chunk within the pool
     size_t allocated_blocks;  // Total number of allocated blocks
@@ -46,7 +44,7 @@ public:
      * @param max_size Maximum size of the memory pool.
      * @param chunk_size Size of each chunk to allocate.
      */
-    FastMemoryPool(size_t max_size = 2ULL * 1024 * 1024 * 1024, size_t chunk_size = 8 * 1024);
+    FastMemoryPool(size_t max_size = 2ULL * 1024 * 1024 * 1024, size_t chunk_size = 12 * 1024);
 
     /**
      * Destructor for FastMemoryPool. Frees all allocated clients and the main memory block.
@@ -79,6 +77,8 @@ public:
      * @return The actual used memory (in bytes, excluding holes and unused memory).
      */
     size_t used();
+
+    size_t get_chunk_size() const;
 
     void *to_pointer(uint32_t index);
     uint32_t to_index(void *ptr);

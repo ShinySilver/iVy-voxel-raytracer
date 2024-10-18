@@ -29,6 +29,8 @@ void *MemoryPoolClient::allocate(int size) {
 
     if (pool.next_alloc == nullptr || uint32_t((char *) pool.next_alloc - (char *) pool.current_chunk + size) > source->chunk_size) {
         pool.next_alloc = source->allocate();
+        // debug("Obtained an allocation with index %u (Ox%x) for allocations of size %d",
+        // source->to_index(pool.next_alloc), source->to_index(pool.next_alloc), size);
         pool.current_chunk = pool.next_alloc;
         if (!pool.next_alloc) {
             fatal("Out of memory");

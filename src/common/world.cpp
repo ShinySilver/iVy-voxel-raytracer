@@ -24,8 +24,8 @@ struct __attribute__((packed)) Node {
 Region::Region() {
     memory_subpool = memory_pool.create_client();
     Node *node = (Node *) memory_subpool->allocate(sizeof(Node));
-    node->header=0;
-    node->bitmap=0;
+    node->header = 0;
+    node->bitmap = 0;
     root_node = memory_subpool->to_index(node);
 }
 
@@ -69,8 +69,8 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
     while (++depth != IVY_REGION_TREE_DEPTH) {
 
         // The node we traverse is not supposed to be terminal, or even weirder a LOD node
-        assert((node->header & (0b01u << 30))==0);
-        assert((node->header & (0b10u << 30))==0);
+        assert((node->header & (0b01u << 30)) == 0);
+        assert((node->header & (0b10u << 30)) == 0);
 
         // We update node_width to be the width of a child of the current node
         node_width /= IVY_NODE_WIDTH;
@@ -111,8 +111,8 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
 
             // And at last, we use placement new to create the new subnode that is the new "current" node
             Node *child = new_child_array + previous_child_id;
-            child->header=0;
-            child->bitmap=0;
+            child->header = 0;
+            child->bitmap = 0;
             node = child;
 
             // If this new node happens to be terminal, we mark it as such
