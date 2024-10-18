@@ -16,7 +16,11 @@ private:
     void *base_addr;  // Base address of the large memory block
     void *next;       // Pointer to the next free address in the pool
     size_t max_size;  // Maximum size of the memory pool
-    size_t chunk_size;  // Size of each chunk within the pool
+    size_t chunk_size;
+public:
+    size_t get_chunk_size() const;
+private:
+    // Size of each chunk within the pool
     size_t allocated_blocks;  // Total number of allocated blocks
     std::mutex guard;  // Mutex for thread-safe operations
     std::deque<void *> free_blocks;  // Deque to store deallocated blocks for reuse
@@ -75,6 +79,7 @@ public:
      * @return The actual used memory (in bytes, excluding holes and unused memory).
      */
     size_t used();
+
     void *to_pointer(uint32_t index);
     uint32_t to_index(void *ptr);
 };
@@ -88,7 +93,7 @@ private:
         size_t allocated;
 
         SubPool() : next_alloc(nullptr), current_chunk(nullptr), holes(), blocks(), allocated() {}
-        ~SubPool() {}
+        ~SubPool() = default;
     };
 
     FastMemoryPool *source;  // Source memory pool
@@ -129,7 +134,7 @@ public:
     void *to_pointer(uint32_t index);
 
     /**
-     * Get the amount of memory currently used by this client, excluding holes.
+     * Get the amount of memory currently used by this client. Always inferior or equals to the total memory allocated to this client.
      * @return The size of the used memory in bytes.
      */
     size_t get_used_memory() const;

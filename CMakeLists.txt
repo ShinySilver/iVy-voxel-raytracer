@@ -18,8 +18,11 @@ set(CMAKE_SCAN_FOR_MODULES)
 set(BUILD_SHARED_LIBS OFF)
 set(CPM_USE_NAMED_CACHE_DIRECTORIES ON)
 set(CMAKE_SOURCE_DIR src/)
-file(GLOB_RECURSE IVY_SRC_FILES ${CMAKE_SOURCE_DIR}/**.cpp ${CMAKE_SOURCE_DIR}/**.glsl)
-add_executable(iVy ${IVY_SRC_FILES})
+file(GLOB_RECURSE IVY_TEST_FILES tests/**.cpp)
+file(GLOB_RECURSE IVY_SRC_FILES src/**.cpp src/**.glsl)
+add_executable(iVy src/main.cpp ${IVY_SRC_FILES})
+list(FILTER IVY_SRC_FILES EXCLUDE REGEX "main.cpp")
+add_executable(iVy_tests ${IVY_SRC_FILES} ${IVY_TEST_FILES})
 
 include(CPM.cmake)
 CPMAddPackage(
@@ -48,6 +51,11 @@ CPMAddPackage(
         GITHUB_REPOSITORY ocornut/imgui
         GIT_TAG v1.91.0
 )
+CPMAddPackage(
+        NAME googletest
+        GITHUB_REPOSITORY google/googletest
+        GIT_TAG v1.15.2
+)
 
 # Generating glad target with gl core 4.3
 set(GLAD_SOURCES_DIR ${glad_SOURCE_DIR})
@@ -66,7 +74,7 @@ if(supported)
     set_property(TARGET iVy PROPERTY INTERPROCEDURAL_OPTIMIZATION <$<CONFIG:Release>:TRUE><$<CONFIG:Debug>:FALSE>)
 endif()
 
-# Enabling libasan only in debug builds
+# Optionally enabling libasan in debug builds
 #target_link_options(iVy PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 
 # Enabling optimization for release builds and more warnings in debugs builds
@@ -75,3 +83,9 @@ target_compile_options(iVy PRIVATE $<$<CONFIG:Release>:-O3 -s -flto>
 
 # Building iVy
 target_link_libraries(iVy glad_gl_core_43 glfw glm FastNoise2 imgui)
+
+# Building iVy_tests
+include(GoogleTest)
+target_include_directories(iVy_tests PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(iVy_tests glad_gl_core_43 glfw glm FastNoise2 imgui gtest_main)
+gtest_discover_tests(iVy_tests)

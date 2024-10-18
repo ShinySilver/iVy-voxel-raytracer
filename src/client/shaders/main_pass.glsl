@@ -93,7 +93,7 @@ void main() {
         bool is_terminal = (current_node.header & (0x1u << 30)) != 0;
         bool is_lod = (current_node.header & (0x1u << 31)) != 0;
         bool has_child;
-        while(!is_terminal && !is_lod && steps < 64) {
+        while(!is_terminal && !is_lod && steps < 16) {
             steps+=1;
             node_width /= NODE_WIDTH;
             uvec3 v = uvec3(ceil(ray_pos / float(node_width)));

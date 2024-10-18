@@ -155,3 +155,6 @@ uint32_t FastMemoryPool::to_index(void *ptr) {
 void *FastMemoryPool::to_pointer(uint32_t index) {
     return (char *) base_addr + index;
 }
+size_t FastMemoryPool::get_chunk_size() const {
+    return chunk_size;
+}
