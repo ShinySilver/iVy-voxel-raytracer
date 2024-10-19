@@ -53,7 +53,7 @@ void client::world_view::update() {
     // TODO: Have a dirty flag per chunk & per region
     if (WorldView.dirty) {
         WorldView.dirty = false;
-        glNamedBufferData(memory_pool_SSBO, (long) memory_pool.size(), memory_pool.to_pointer(WorldView.region->get_root_node()), GL_STATIC_COPY);
+        glNamedBufferData(memory_pool_SSBO, (long) memory_pool.size(), memory_pool.to_pointer(0), GL_STATIC_COPY);
     }
 }
 

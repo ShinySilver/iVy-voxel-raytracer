@@ -23,7 +23,9 @@ struct __attribute__((packed)) Node {
 
 Region::Region() {
     memory_subpool = memory_pool.create_client();
+    info("%u", memory_subpool->to_index(memory_subpool->allocate(sizeof(Node))));
     Node *node = (Node *) memory_subpool->allocate(sizeof(Node));
+    info("%u", memory_subpool->to_index(node));
     node->header = 0;
     node->bitmap = 0;
     root_node = memory_subpool->to_index(node);

@@ -1,5 +1,5 @@
 const char *main_pass_glsl = R""(
-#version 430 core
+#version 460 core
 #extension GL_NV_gpu_shader5 : enable
 
 layout (local_size_x = 8, local_size_y = 8) in;
@@ -27,7 +27,7 @@ layout (packed, binding = 0) readonly buffer _node_pool{
     Node node_pool[];
 };
 
-layout (packed, binding = 0) readonly buffer _voxel_pool{
+layout (std430, binding = 1) readonly buffer _voxel_pool{
     uint8_t voxel_pool[];
 };
 
@@ -83,34 +83,44 @@ void main() {
     vec3 color = vec3(0.69, 0.88, 0.90);
 
     // if the ray intersect the world volume, raytrace
-    Node current_node = node_pool[0];
+    uint root_node = 1;
+    Node current_node = node_pool[root_node];
     uint hit = 0, steps = 0;
     if (intersect >= 0) {
         // first, reach the ray initial position on the edge of the world volume
         uint node_width = uint(world_width);
         bool is_terminal = (current_node.header & (0x1u << 30)) != 0;
         bool is_lod = (current_node.header & (0x1u << 31)) != 0;
-        bool has_child;
-        while(!is_terminal && steps < 1) {
-            hit = 1;
+        bool has_child = false;
+        while(!is_terminal && steps < 2) {
             steps+=1;
-            node_width /= NODE_WIDTH;
-            uvec3 v = uvec3(floor(ray_pos / float(node_width)));
-            has_child = ((current_node.bitmask & (0x1ul << (v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH))) != 0);
+            node_width = uint(round(node_width/NODE_WIDTH));
+            //if(node_width==1) hit = 3;
+            uvec3 v = uvec3(floor(mod(ray_pos, node_width*NODE_WIDTH) / float(node_width)));
+            //if((v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH)==0) hit = 3;
+            has_child = ((current_node.bitmask & (0x1ul << uint(v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH))) != 0);
+            //if(has_child) hit = 3;
             if(!has_child) break;
-            uint64_t filtered = current_node.bitmask & (U64_MAX >> (64 - v.x - v.y * NODE_WIDTH - v.z * NODE_WIDTH * NODE_WIDTH));
+            hit = 1;
+            //if(uint(v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH)==0) hit = 3;
+            uint64_t filtered = current_node.bitmask & ~(U64_MAX << uint(v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH));
+            //if(filtered==0) hit = 3;
             uint hit_index = uint(bitCount(uint(filtered)) + bitCount(uint(filtered >> 32))); // Child with id 1 has index 0
-            hit_index += (current_node.header & 0x3fffffffu)/SIZEOF_NODE; // must be a node array as it is not terminal
-            current_node = node_pool[int(hit_index)];
+            //if(hit_index==0) hit = 3;
+            hit_index += uint((current_node.header & ~(0x3u << 30))/SIZEOF_NODE); // must be a node array as it is not terminal
+            //if(hit_index==0x93000u/SIZEOF_NODE) hit = 3;
+            current_node = node_pool[hit_index];
+            //if(current_node.bitmask != 0x0ul) hit = 2;
+            //if(current_node.header != 0x0ul) hit = 2;
             is_lod = (current_node.header & (0x1u << 31)) != 0;
             is_terminal = (current_node.header & (0x1u << 30)) != 0;
         }
         if(has_child){
             hit = 2;
             node_width /= NODE_WIDTH;
-            uvec3 v = uvec3(floor(ray_pos / float(node_width)));
+            uvec3 v = uvec3(floor(mod(ray_pos, node_width*NODE_WIDTH) / float(node_width)));
             bool is_solid = (current_node.bitmask & (0x1ul << (v.x + v.y * NODE_WIDTH + v.z * NODE_WIDTH * NODE_WIDTH))) != 0;
-            if(is_solid) hit = 3;
+            if(is_solid) hit = 4;
         }
     }
 
