@@ -34,12 +34,16 @@ void client::world_view::init() {
     WorldView.dirty = true;
     info("Done generating after %.2f ms!", double (time_us()-t0)/1e3);
     debug("Root node has bitmask 0x%lx and header 0x%x",
-          *((uint64_t *) memory_pool.to_pointer(WorldView.region->get_root_node())),
-          *(((uint32_t *) memory_pool.to_pointer(WorldView.region->get_root_node())) + 2));
+          ((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->bitmap,
+          ((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header);
     debug("For reference, node 0x%x has bitmask 0x%lx and header 0x%x",
-          *(((uint32_t *) memory_pool.to_pointer(WorldView.region->get_root_node())) + 2),
-          *((uint64_t *) memory_pool.to_pointer(*(((uint32_t *) memory_pool.to_pointer(WorldView.region->get_root_node())) + 2))),
-          *(((uint32_t *) memory_pool.to_pointer(*(((uint32_t *) memory_pool.to_pointer(WorldView.region->get_root_node())) + 2))) + 2));
+          ((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header,
+          ((Node *)memory_pool.to_pointer(((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header))->bitmap,
+          ((Node *)memory_pool.to_pointer(((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header))->header)
+    debug("For reference, node 0x%x has bitmask 0x%lx and header 0x%x",
+          ((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header + uint(sizeof(Node)*2),
+          ((Node *)memory_pool.to_pointer(((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header + uint(sizeof(Node)*2)))->bitmap,
+          ((Node *)memory_pool.to_pointer(((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header + uint(sizeof(Node)*2)))->header)
 
 
     // Creating the buffer that will receive the WorldView data

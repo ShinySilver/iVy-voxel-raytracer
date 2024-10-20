@@ -79,7 +79,7 @@ size_t MemoryPoolClient::get_used_memory() const {
 FastMemoryPool::FastMemoryPool(size_t max_size, size_t chunk_size)
         : base_addr(nullptr), next(nullptr), max_size(max_size), chunk_size(chunk_size), allocated_blocks(0) {
 
-    base_addr = std::aligned_alloc(32, max_size);
+    base_addr = std::aligned_alloc(64, max_size);
     memset(base_addr, 0, max_size);
     if (!base_addr) {
         throw std::bad_alloc();

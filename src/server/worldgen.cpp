@@ -27,6 +27,7 @@ static Chunk *generate_chunk(int x, int y, int z) {
         }
     }
     if(voxel_count==0) return nullptr;
+    //if(voxel_count == IVY_NODE_WIDTH_CUBED) return nullptr;
     return &chunk;
 }
 

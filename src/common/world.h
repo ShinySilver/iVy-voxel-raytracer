@@ -10,12 +10,28 @@
 #define IVY_NODE_WIDTH_CUBED (IVY_NODE_WIDTH*IVY_NODE_WIDTH*IVY_NODE_WIDTH)
 #define IVY_NODE_SIZE (8+4)
 
-#define IVY_REGION_TREE_DEPTH (2)
+#define IVY_REGION_TREE_DEPTH (3)
 #define IVY_REGION_WIDTH (0x1<<(IVY_NODE_WIDTH_SQRT*IVY_REGION_TREE_DEPTH))
 
 typedef uint8_t Voxel;
 
 extern FastMemoryPool memory_pool;
+
+struct __attribute__((packed)) Node {
+    /**
+     * 4x4x4 bit, one per subnode. Can be used for faster traversal than a list of u32.
+     * An empty bitmap with value 0x0000 means that the node data has not been generated yet.
+     */
+    uint64_t bitmap = 0;
+
+    /**
+     * The header starts with two bits encoding the LOD status:
+     * - If the first bits are 0b00, the last 30 bits are the address of the first non-empty subnode.
+     * - If the first bits are 0b01, the node is terminal and the last 30 bits are the address of the first non-empty voxel.
+     * - If the first bits are Ob11, the node is terminal and the last 8 bits are the LOD color of the non-empty subnodes.
+     */
+    uint32_t header = 0;
+};
 
 class Chunk {
 private:

@@ -5,27 +5,9 @@
 
 FastMemoryPool memory_pool = FastMemoryPool();
 
-struct __attribute__((packed)) Node {
-    /**
-     * 4x4x4 bit, one per subnode. Can be used for faster traversal than a list of u32.
-     * An empty bitmap with value 0x0000 means that the node data has not been generated yet.
-     */
-    uint64_t bitmap = 0;
-
-    /**
-     * The header starts with two bits encoding the LOD status:
-     * - If the first bits are 0b00, the last 30 bits are the address of the first non-empty subnode.
-     * - If the first bits are 0b01, the node is terminal and the last 30 bits are the address of the first non-empty voxel.
-     * - If the first bits are Ob11, the node is terminal and the last 8 bits are the LOD color of the non-empty subnodes.
-     */
-    uint32_t header = 0;
-};
-
 Region::Region() {
     memory_subpool = memory_pool.create_client();
-    info("%u", memory_subpool->to_index(memory_subpool->allocate(sizeof(Node))));
     Node *node = (Node *) memory_subpool->allocate(sizeof(Node));
-    info("%u", memory_subpool->to_index(node));
     node->header = 0;
     node->bitmap = 0;
     root_node = memory_subpool->to_index(node);
@@ -35,13 +17,13 @@ static void delete_node_recursively(MemoryPoolClient *memory_subpool, Node *node
     depth += 1;
     if (depth != IVY_REGION_TREE_DEPTH) {
         Node *child_array = (Node *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
-        int child_count = __builtin_popcountl(node->bitmap);
+        int child_count = __builtin_popcountll(node->bitmap);
         for (int i = 0; i < child_count; i++) {
             delete_node_recursively(memory_subpool, &child_array[child_count], depth);
         }
     } else {
         Voxel *child_array = (Voxel *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
-        int child_count = __builtin_popcountl(node->bitmap);
+        int child_count = __builtin_popcountll(node->bitmap);
         for (int i = 0; i < child_count; i++) {
             memory_subpool->deallocate(&child_array[child_count], sizeof(Voxel));
         }
@@ -90,8 +72,8 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
             //assert((node->header & ~(0b11u << 30)) != 0); //
 
             // First, we update the current node bitmap to account for the child that will soon be created
-            int previous_child_count = __builtin_popcountl(node->bitmap);
-            int previous_child_id = __builtin_popcountl(node->bitmap & ~((~0x0ul) << child_xyz));
+            int previous_child_count = __builtin_popcountll(node->bitmap);
+            int previous_child_id = __builtin_popcountll(node->bitmap & ~(UINT64_MAX << child_xyz));
             node->bitmap = node->bitmap | (0x1ul << child_xyz);
 
             // The while loop guarantee the current node is not supposed to be terminal. As such, the current node children are nodes of size 12.
@@ -121,7 +103,7 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
             if (depth + 1 == IVY_REGION_TREE_DEPTH) child->header = child->header | (0x1u << 30);
         } else {
             // If a child exist for the volume we want to write to, we just enter it
-            int previous_child_id = __builtin_popcountl(node->bitmap & ~((~0x0ul) << child_xyz));
+            int previous_child_id = __builtin_popcountll(node->bitmap & ~((~0x0ul) << child_xyz));
             Node *child_array = (Node *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
             node = &child_array[previous_child_id];
         }
@@ -132,7 +114,7 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
 
     // If the target node has an allocation (non-empty and non-LOD), we first have to free it
     if (node->bitmap != 0 && (node->header & (0b10u << 30)) == 0) {
-        int child_count = __builtin_popcountl(node->bitmap);
+        int child_count = __builtin_popcountll(node->bitmap);
         node->bitmap = 0;
         Node *child_array = (Node *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
         memory_subpool->deallocate(child_array, child_count * sizeof(Voxel));
@@ -151,7 +133,7 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
                     } else if (uniform_material != voxel) {
                         is_uniform = false;
                     }
-                    node->bitmap = node->bitmap | (0x1ul << (dx + dy * IVY_NODE_WIDTH + dz * IVY_NODE_WIDTH * IVY_NODE_WIDTH));
+                    node->bitmap = node->bitmap | (0x1ul << (child_x + child_y * IVY_NODE_WIDTH + child_z * IVY_NODE_WIDTH * IVY_NODE_WIDTH));
                 }
             }
         }
@@ -162,7 +144,7 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
         node->header = uniform_material | (0b11u << 30);
     } else {
         // If it's not, we allocate a voxel array, place it in the header, and set the voxels.
-        int child_count = __builtin_popcountl(node->bitmap);
+        int child_count = __builtin_popcountll(node->bitmap);
         Voxel *child_array = (Voxel *) memory_subpool->allocate(child_count * sizeof(Voxel));
         node->header = memory_subpool->to_index(child_array);
         int index = 0;

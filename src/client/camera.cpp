@@ -4,13 +4,13 @@
 #include "../common/world.h"
 
 namespace client::camera {
-    glm::vec3 position{-IVY_REGION_WIDTH, -IVY_REGION_WIDTH, -IVY_REGION_WIDTH}, direction{0.5f, 0.5f, 0.5f};
+    glm::vec3 position{-IVY_REGION_WIDTH, 2*IVY_REGION_WIDTH, -IVY_REGION_WIDTH}, direction{0.5f, -0.5f, 0.5f};
     glm::mat4 view_matrix{};
 }
 
 #define CAMERA_BASE_SPEED (250.f)
 #define CAMERA_FAST_SPEED (1000.f)
-#define CAMERA_SPEED_MODIFIER (0.1f)
+#define CAMERA_SPEED_MODIFIER (1.0f)
 #define CAMERA_MOUSE_SENSITIVITY (3)
 
 void client::camera::update(GLFWwindow *window) {
@@ -28,15 +28,15 @@ void client::camera::update(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) position -= right * delta_time * speed;
 
     glm::vec3 up = normalize(cross(direction, right));
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) position += up * delta_time * speed;
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) position -= up * delta_time * speed;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) position -= up * delta_time * speed;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) position += up * delta_time * speed;
 
     static double oldPosX = 0.0, oldPosY = 0.0;
     double posX, posY;
     glfwGetCursorPos(window, &posX, &posY);
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) || glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         direction = normalize(direction - right * float((posX - oldPosX) * CAMERA_MOUSE_SENSITIVITY / 1000.0f));
-        direction = normalize(direction - glm::vec3{0, 1, 0} * float(-(posY - oldPosY) * CAMERA_MOUSE_SENSITIVITY * 2 / 1000.0f));
+        direction = normalize(direction - glm::vec3{0, 1, 0} * float((posY - oldPosY) * CAMERA_MOUSE_SENSITIVITY * 2 / 1000.0f));
     }
     oldPosX = posX, oldPosY = posY;
 
