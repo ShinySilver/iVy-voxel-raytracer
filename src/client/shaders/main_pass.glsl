@@ -89,41 +89,7 @@ void main() {
     // If the ray intersect the world volume, raytrace
     if (intersect >= 0) {
 
-        // Algorithm 1:
-        // do:
-        //    check hit
-        //    if not hit: break
-        //    find child index
-        //    add current to stack
-        //    set current to child
-        //    check terminal
-        // while not terminal
-        // if hit:
-        //    check hit
-        //    if hit: return hit color
-        // update lbb
-        // do:
-        //    do:
-        //       dda_step
-        //       check hit
-        //       if hit && terminal: return hit color
-        //       if hit:
-        //           go down
-        //           check terminal
-        //           update lbb
-        //    while in-local-bound
-        //    if not in-global-bound: break
-        //    do:
-        //       go up
-        //    while not in-local-bound
-        //    set terminal to false as we just went up
-        // while in-global-bound
-        // return sky color
-        // Alternate algorithm 1:
-        // Replace all while loops with for loops with depth counter but with break statements
-
-
-        // Let's define all the variables that will be useful to the raytracing
+        // Defining a few variables that will be useful to the traversal
         bool is_terminal, has_collided;
         uint node_width = uint(world_width) >> NODE_WIDTH_SQRT;
         uint current_node_index = 0;
@@ -207,7 +173,7 @@ void main() {
         }
 
         // update lbb
-        lbmin = uvec3(ray_pos) & uvec3(node_width - 1u);
+        lbmin = uvec3(ray_pos) ^ uvec3(node_width - 1u);
         lbmax = lbmin + uvec3(node_width);
 
         do {
@@ -217,7 +183,7 @@ void main() {
                 float ray_step = min(tmax.x, min(tmax.y, tmax.z));
                 vec3 mask = vec3(1);
                 //ray_pos = ray_pos + ray_step + MINI_STEP_SIZE*ray_sign*mask;
-                ray_pos += vec3(1, 0, 0);
+                ray_pos += ray_dir;
 
                 // if not in-local-bound: break
                 if(any(greaterThanEqual(ray_pos, lbmax)) || any(lessThan(ray_pos, lbmin))) break;
