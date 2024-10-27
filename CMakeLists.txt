@@ -1,19 +1,17 @@
 cmake_minimum_required(VERSION 3.22)
 project(iVy)
 
-if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
-    message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there. You may need to remove CMakeCache.txt.")
-endif ()
-
 if (NOT CMAKE_BUILD_TYPE)
     message("Build Type not set, defaulting to Release")
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
 set(CMAKE_GENERATOR Ninja)
+set(CMAKE_MAKE_PROGRAM ninja)
+set(CMAKE_CXX_COMPILER /usr/bin/g++-13)
+
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_COMPILER /usr/bin/g++-13)
 set(CMAKE_SCAN_FOR_MODULES)
 set(BUILD_SHARED_LIBS OFF)
 set(CPM_USE_NAMED_CACHE_DIRECTORIES ON)

@@ -3,7 +3,7 @@ const char *main_pass_glsl = R""(
 #extension GL_NV_gpu_shader5 : enable
 
 layout (local_size_x = 8, local_size_y = 8) in;
-layout (rgba8, binding = 0) uniform writeonly image2D outImage;
+layout (rgba8, binding = 0) uniform restrict writeonly image2D outImage;
 
 uniform uvec2 screen_size;
 uniform vec3 camera_position;
@@ -16,20 +16,17 @@ uniform uint tree_depth;
 #define NODE_WIDTH_SQRT 2
 #define MINI_STEP_SIZE 4e-2
 
-#define U64_MAX 0xfffffffffffffffful
-#define U32_MAX 0xffffffffu
-
 struct Node{
-    uint32_t bitmask_low;
-    uint32_t bitmask_high;
+    uint bitmask_low;
+    uint bitmask_high;
     uint header;
 };
 
-layout (std430, binding = 0) readonly buffer _node_pool{
+layout (std430, binding = 0) restrict readonly buffer _node_pool{
     Node node_pool[];
 };
 
-layout (std430, binding = 1) readonly buffer _voxel_pool{
+layout (std430, binding = 1) restrict readonly buffer _voxel_pool{
     uint8_t voxel_pool[];
 };
 
@@ -65,53 +62,99 @@ float AABBIntersect(vec3 bmin, vec3 bmax, vec3 orig, vec3 invdir) {
     return -1;
 }
 
+float sign11(float x) {
+    return x < 0. ? -1. : 1.;
+}
+
 void main() {
     // make sure current thread is inside the window bounds
     if (any(greaterThanEqual(gl_GlobalInvocationID.xy, screen_size))) return;
 
     // calc ray direction for current pixel
     vec3 ray_dir = getRayDir(ivec2(gl_GlobalInvocationID.xy));
+    vec3 inverted_ray_dir = 1.0f / ray_dir;
     vec3 previous_ray_pos, ray_pos = camera_position;
+    vec3 ray_sign = vec3(sign11(ray_dir.x), sign11(ray_dir.y), sign11(ray_dir.z));
 
     // check if the camera is outside the voxel volume
     float world_width = pow(NODE_WIDTH, tree_depth);
-    float intersect = AABBIntersect(vec3(MINI_STEP_SIZE), vec3(world_width-MINI_STEP_SIZE), camera_position, 1.0f / ray_dir);
+    vec3 bmin = vec3(0), bmax = vec3(world_width); // Eventually consider adding a MINI_STEP_SIZE
+    float intersect = AABBIntersect(bmin, bmax, camera_position, inverted_ray_dir);
 
     // if it is outside the terrain, offset the ray so its starting position is (slightly) in the voxel volume
     if (intersect > 0) {
         ray_pos += ray_dir * (intersect + MINI_STEP_SIZE);
     }
 
-    // Setting the default color as a tint of blue
-    vec3 color = vec3(0.69, 0.88, 0.90);
-
     // If the ray intersect the world volume, raytrace
-    Node current_node = node_pool[0];
-    uint hit = 0, steps = 0;
     if (intersect >= 0) {
-        // first step of raytracing is descending in the tree tp reach the ray initial position on the edge of the world volume
-        uint node_width = uint(world_width);
-        bool is_terminal, has_child;
+
+        // Algorithm 1:
+        // do:
+        //    check hit
+        //    if not hit: break
+        //    find child index
+        //    add current to stack
+        //    set current to child
+        //    check terminal
+        // while not terminal
+        // if hit:
+        //    check hit
+        //    if hit: return hit color
+        // update lbb
+        // do:
+        //    do:
+        //       dda_step
+        //       check hit
+        //       if hit && terminal: return hit color
+        //       if hit:
+        //           go down
+        //           check terminal
+        //           update lbb
+        //    while in-local-bound
+        //    if not in-global-bound: break
+        //    do:
+        //       go up
+        //    while not in-local-bound
+        //    set terminal to false as we just went up
+        // while in-global-bound
+        // return sky color
+        // Alternate algorithm 1:
+        // Replace all while loops with for loops with depth counter but with break statements
+
+
+        // Let's define all the variables that will be useful to the raytracing
+        bool is_terminal, has_collided;
+        uint node_width = uint(world_width) >> NODE_WIDTH_SQRT;
+        uint current_node_index = 0;
+        Node current_node = node_pool[current_node_index];
+
+        // Setting up the stack
+        uint stack[5];
+        uint depth = 0;
+        stack[depth] = current_node_index;
+
+        // And a few constants
+        vec3 ray_sign_11 = vec3(sign11(ray_dir.x), sign11(ray_dir.y), sign11(ray_dir.z));
+        vec3 ray_sign_01 = max(ray_sign_11, 0.);
+
+        // As well as a few temporary values used in the algorithm
+        vec3 lbmin, lbmax;
+
         do {
-            // We add a limitation to the number of step as a failsafe
-            steps+=1;
-
-            // We update the size of a child node as we descend
-            node_width = node_width >> NODE_WIDTH_SQRT;
-
-            // Our first step is checking in the bitmask whether or not there is a child node to descend to
-            uvec3 v = (uvec3(ray_pos) & uvec3((node_width * NODE_WIDTH) - 1u)) / uvec3(node_width);
+            // check hit
+            uvec3 v = (uvec3(ray_pos) & uvec3((node_width * NODE_WIDTH) - 1u)) / uvec3(node_width); // bitwise shift?
             int bitmask_index = int(v.x + v.z * NODE_WIDTH + v.y * NODE_WIDTH * NODE_WIDTH);
             if (bitmask_index < 32) {
-                has_child = ((current_node.bitmask_low & (0x1u << bitmask_index)) != 0);
+                has_collided = ((current_node.bitmask_low & (0x1u << bitmask_index)) != 0);
             } else {
-                has_child = ((current_node.bitmask_high & (0x1u << (bitmask_index - 32))) != 0);
+                has_collided = ((current_node.bitmask_high & (0x1u << (bitmask_index - 32))) != 0);
             }
 
-            // If the current node has no child to descend to in the ray position, we can just stop there
-            if(!has_child) break;
+            // if not hit: break
+            if(!has_collided) break;
 
-            // In order to select a child node, we start by filtering out the bit that are above the bitmask index
+            // find child index
             uint filtered_low, filtered_high;
             if (bitmask_index < 32) {
                 filtered_low = current_node.bitmask_low & ((1u << bitmask_index) - 1u);
@@ -120,37 +163,143 @@ void main() {
                 filtered_low = current_node.bitmask_low;
                 filtered_high = current_node.bitmask_high & ((1u << (bitmask_index - 32)) - 1u);
             }
+            uint hit_index = uint(bitCount(filtered_low) + bitCount(filtered_high)) + uint((current_node.header & ~(0x3u << 30))/SIZEOF_NODE);
 
-            // Counting the remaining bits to know the index of the target child node in the children array
-            uint hit_index = uint(bitCount(filtered_low) + bitCount(filtered_high));
-
-            // Adding the index of the children array, to have the absolute index of the target child node
-            hit_index += uint((current_node.header & ~(0x3u << 30))/SIZEOF_NODE);
-
-            // Descending in the target child node!
+            // go down
+            depth += 1;
+            stack[depth] = current_node_index;
+            current_node_index = hit_index;
             current_node = node_pool[hit_index];
-            is_terminal = (current_node.header & (0x1u << 30)) != 0;
-        } while(!is_terminal && steps < 16);
 
-        if(has_child){
+            // check terminal
+            is_terminal = (current_node.header & (0x1u << 30)) != 0;
+
+            // update node width
+            node_width = node_width >> NODE_WIDTH_SQRT;
+
+        // while not terminal
+        } while(!is_terminal);
+
+        // if hit:
+        if(has_collided) {
+
+            //  check hit
             uvec3 v = uvec3(ray_pos) & uvec3(NODE_WIDTH) - 1u;
             int bitmask_index = int(v.x + v.z * NODE_WIDTH + v.y * NODE_WIDTH * NODE_WIDTH);
             if (bitmask_index < 32) {
-                has_child = ((current_node.bitmask_low & (0x1u << bitmask_index)) != 0);
+                has_collided = ((current_node.bitmask_low & (0x1u << bitmask_index)) != 0);
             } else {
-                has_child = ((current_node.bitmask_high & (0x1u << (bitmask_index - 32))) != 0);
+                has_collided = ((current_node.bitmask_high & (0x1u << (bitmask_index - 32))) != 0);
             }
-            bool is_lod = (current_node.header & (0x1u << 31)) != 0;
-            if(has_child) hit = 3;
+
+            //  if hit: return hit color
+            if(has_collided){
+                bool is_lod = (current_node.header & (0x1u << 31)) != 0;
+                uint color_index = 0;
+                if(is_lod){
+                    color_index = current_node.header & ~(0x3u << 30);
+                }else{
+                    // Not implemented. We return DEBUG_RED
+                }
+                imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[color_index-1].xyz, 1));
+                return;
+            }
         }
+
+        // update lbb
+        lbmin = uvec3(ray_pos) & uvec3(node_width - 1u);
+        lbmax = lbmin + uvec3(node_width);
+
+        do {
+            do {
+                // dda_step
+                vec3 tmax = inverted_ray_dir * (node_width * ray_sign_01 - mod(ray_pos, node_width));
+                float ray_step = min(tmax.x, min(tmax.y, tmax.z));
+                vec3 mask = vec3(1);
+                //ray_pos = ray_pos + ray_step + MINI_STEP_SIZE*ray_sign*mask;
+                ray_pos += vec3(1, 0, 0);
+
+                // if not in-local-bound: break
+                if(any(greaterThanEqual(ray_pos, lbmax)) || any(lessThan(ray_pos, lbmin))) break;
+
+                // check hit
+                uvec3 v = (uvec3(ray_pos) & uvec3((node_width * NODE_WIDTH) - 1u)) / uvec3(node_width); // bitwise shift?
+                int bitmask_index = int(v.x + v.z * NODE_WIDTH + v.y * NODE_WIDTH * NODE_WIDTH);
+                if (bitmask_index < 32) {
+                    has_collided = ((current_node.bitmask_low & (0x1u << bitmask_index)) != 0);
+                } else {
+                    has_collided = ((current_node.bitmask_high & (0x1u << (bitmask_index - 32))) != 0);
+                }
+
+                // if hit && terminal: return hit color
+                if(has_collided && is_terminal){
+                    bool is_lod = (current_node.header & (0x1u << 31)) != 0;
+                    uint color_index = 0;
+                    if(is_lod){
+                        color_index = current_node.header & ~(0x3u << 30);
+                    }else{
+                        // Not implemented. We return DEBUG_RED
+                    }
+                    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[color_index-1].xyz, 1));
+                    return;
+                }
+
+                // if hit:
+                if(has_collided){
+
+                    // find child index
+                    uint filtered_low, filtered_high;
+                    if (bitmask_index < 32) {
+                        filtered_low = current_node.bitmask_low & ((1u << bitmask_index) - 1u);
+                        filtered_high = 0u;
+                    } else {
+                        filtered_low = current_node.bitmask_low;
+                        filtered_high = current_node.bitmask_high & ((1u << (bitmask_index - 32)) - 1u);
+                    }
+                    uint hit_index = uint(bitCount(filtered_low) + bitCount(filtered_high)) + uint((current_node.header & ~(0x3u << 30))/SIZEOF_NODE);
+
+                    // go down
+                    depth += 1;
+                    stack[depth] = current_node_index;
+                    current_node_index = hit_index;
+                    current_node = node_pool[hit_index];
+
+                    // check terminal
+                    is_terminal = (current_node.header & (0x1u << 30)) != 0;
+
+                    // update node width
+                    node_width = node_width >> NODE_WIDTH_SQRT;
+
+                    // update lbb
+                    lbmin = uvec3(ray_pos) & uvec3(node_width - 1u);
+                    lbmax = lbmin + uvec3(node_width);
+                }
+            } while(true); // while in-local-bound
+
+            // if not in-global-bound: break
+            if(any(greaterThanEqual(ray_pos, bmax)) || any(lessThan(ray_pos, bmin))) break;
+
+            do{
+                // go up
+                current_node_index = stack[depth];
+                depth -= 1;
+
+                // update lbb
+                node_width = node_width << NODE_WIDTH_SQRT;
+                lbmin = uvec3(ray_pos) & uvec3(node_width - 1u);
+                lbmax = lbmin + uvec3(node_width);
+            } while(any(greaterThanEqual(ray_pos, lbmax)) || any(lessThan(ray_pos, lbmin))); // while not in-local-bound
+
+            // set terminal to false, as we have just went up
+            is_terminal = false;
+
+        } while(true); // while in-global-bound
     }
 
-    // If there was a hit, we extract the color from the last node & voxel pool
-    if(hit > 0){
-        color = colors[hit-1]; // air with id 0 is undefined
-    }
+    // Setting the sky color
+    vec3 color = vec3(0.69, 0.88, 0.90);
 
-    // output color to texture
+    // Applying the sky color to the framebuffer
     imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1));
 }
 )"";
