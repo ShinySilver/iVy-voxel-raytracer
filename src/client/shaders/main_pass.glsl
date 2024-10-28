@@ -115,9 +115,6 @@ void main() {
         do {
             // while not in-local-bound, ascend the tree
             while(any(greaterThanEqual(ray_pos, lbmax)) || any(lessThan(ray_pos, lbmin))){
-                //imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[0], 1.00)); return;
-
-                //if(depth == 0){imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[0], 1.00)); return;}
 
                 // go up
                 current_node_index = stack[depth];
@@ -147,7 +144,6 @@ void main() {
 
             // we go down the tree until we either hit an empty node or we hit a voxel
             if(has_collided){
-                //if(dda_steps == 1){imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[2], 1.00)); return;}
                 do{
                     if(tree_steps == tree_step_limit){imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[2], 1.00)); return;}
                     // if there is a hit on a voxel in a terminal node: return hit color
