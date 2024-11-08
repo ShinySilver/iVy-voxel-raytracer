@@ -21,7 +21,7 @@ void client::start() {
     world_view::init();
     renderer::init(window);
     gui::init(window);
-    glfwShowWindow(window); // the window is initially hidden. We show it only after creating doing the lengthy initialisation.
+    glfwShowWindow(window); // the window is initially hidden. We show it only after doing the lengthy initialisation.
     info("Client started")
 
     /**
@@ -60,5 +60,5 @@ void client::start() {
 }
 
 void client::terminate() {
-    glfwSetWindowShouldClose(window, 1);
+    glfwSetWindowShouldClose(window, true);
 }

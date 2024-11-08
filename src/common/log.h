@@ -13,7 +13,7 @@
 
 #define debug(_message, ...) {printf("[DEBUG] %s:%d ", __FILE__, __LINE__); printf(_message, ##__VA_ARGS__); printf("\n");}
 #define info(_message, ...) {printf("[INFO] %s:%d ", __FILE__, __LINE__); printf(_message, ##__VA_ARGS__); printf("\n");}
-#define warn(_message, ...) {printf(ANSI_COLOR_RED "[WARN] %s:%d ", __FILE__, __LINE__); printf(_message, ##__VA_ARGS__); printf(ANSI_COLOR_RESET "\n");}
+#define warn(_message, ...) {printf(ANSI_COLOR_YELLOW "[WARN] %s:%d ", __FILE__, __LINE__); printf(_message, ##__VA_ARGS__); printf(ANSI_COLOR_RESET "\n");}
 #define error(_message, ...) {fprintf(stderr, ANSI_COLOR_RED "[ERROR] %s:%d ", __FILE__, __LINE__); fprintf(stderr, _message, ##__VA_ARGS__); fprintf(stderr, ANSI_COLOR_RESET "\n");}
 #define fatal(_message, ...) {fprintf(stderr, ANSI_COLOR_RED "[FATAL] %s:%d ", __FILE__, __LINE__); fprintf(stderr, _message, ##__VA_ARGS__); fprintf(stderr, ANSI_COLOR_RESET "\n"); raise(SIGSEGV); __builtin_trap();}
 
@@ -22,7 +22,7 @@
 #endif
 
 #ifndef NDEBUG
-#define assert(expr) if(!(expr)) fatal("Assertion \"" #expr "\" failed. Program will exit.")
+#define assert(expr) if(!(expr)) fatal("Assertion \"%s\" failed. Program will exit.", #expr)
 #else
 #define assert(expr)
 #endif

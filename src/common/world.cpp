@@ -4,6 +4,7 @@
 #include <cmath>
 
 FastMemoryPool memory_pool = FastMemoryPool();
+Generator *world_generator = nullptr;
 
 Region::Region() {
     memory_subpool = memory_pool.create_client();
@@ -117,7 +118,7 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
         int child_count = __builtin_popcountll(node->bitmap);
         node->bitmap = 0;
         Node *child_array = (Node *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
-        memory_subpool->deallocate(child_array, child_count * sizeof(Voxel));
+        memory_subpool->deallocate(child_array, int(child_count * sizeof(Voxel)));
     }
 
     // Now that we know for sure that the node has no existing allocation, we can write into it. First, we assemble the bitmask...
@@ -145,7 +146,7 @@ uint32_t Region::add_leaf_node(int dx, int dy, int dz, Chunk *chunk) {
     } else {
         // If it's not, we allocate a voxel array, place it in the header, and set the voxels.
         int child_count = __builtin_popcountll(node->bitmap);
-        Voxel *child_array = (Voxel *) memory_subpool->allocate(child_count * sizeof(Voxel));
+        Voxel *child_array = (Voxel *) memory_subpool->allocate(int(child_count * sizeof(Voxel)));
         node->header = memory_subpool->to_index(child_array);
         int index = 0;
         for (child_z = 0; child_z < IVY_NODE_WIDTH; child_z++) {
@@ -175,20 +176,20 @@ Voxel Chunk::get(int x, int y, int z) const {
     return voxels[x + y * IVY_NODE_WIDTH + z * IVY_NODE_WIDTH * IVY_NODE_WIDTH];
 }
 
-HeightMap::HeightMap(int resolution_x, int resolution_y, int scaling_factor) :
-        data{(int *) std::malloc(sizeof(int) * resolution_x * resolution_y)}, resolution_x{resolution_x}, resolution_y{resolution_y},
-        scaling_factor{scaling_factor} { std::memset(data, 0, resolution_x * resolution_y * sizeof(int)); }
+HeightMap::HeightMap(int resolution_x, int resolution_y) :
+        data{(int *) std::malloc(sizeof(int) * resolution_x * resolution_y)}, resolution_x{resolution_x}, resolution_y{resolution_y}
+        { std::memset(data, 0, resolution_x * resolution_y * sizeof(int)); }
 
 HeightMap::~HeightMap() { free(data); }
 
 int HeightMap::get_value(int x, int y) {
     assert(x >= 0 && y >= 0 && x < resolution_x && y < resolution_y);
-    return data[(x + y * resolution_x) / scaling_factor];
+    return data[x + y * resolution_x];
 }
 
 void HeightMap::set_value(int x, int y, int value) {
     assert(x >= 0 && y >= 0 && x < resolution_x && y < resolution_y);
-    data[(x + y * resolution_x) / scaling_factor] = value;
+    data[x + y * resolution_x] = value;
 }
 
 int HeightMap::get_resolution_x() const {
@@ -197,8 +198,4 @@ int HeightMap::get_resolution_x() const {
 
 int HeightMap::get_resolution_y() const {
     return resolution_y;
-}
-
-int HeightMap::get_scaling_factor() const {
-    return scaling_factor;
 }

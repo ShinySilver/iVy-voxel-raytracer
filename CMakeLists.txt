@@ -38,6 +38,7 @@ CPMAddPackage(
         NAME FastNoise2
         GITHUB_REPOSITORY Auburn/FastNoise2
         GIT_TAG v0.10.0-alpha
+        OPTIONS "FASTNOISE2_NOISETOOL OFF"
 )
 CPMAddPackage(
         NAME glad

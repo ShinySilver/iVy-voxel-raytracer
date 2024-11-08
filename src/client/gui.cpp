@@ -50,7 +50,7 @@ static void showOverlay() {
     static float mean[value_count] = {}, vram[value_count] = {};
     static int values_offset = 0;
     static double refresh_time = ImGui::GetTime() + 1.0f / refresh_rate;
-    static double frame_total = 0, frame_count = 0, last_mean = 0;
+    static double frame_total = 0, frame_count = 0, last_mean = 0, window_time = 0;
 
     // Update the window
     ImGuiIO &io = ImGui::GetIO();
@@ -76,6 +76,7 @@ static void showOverlay() {
     // Create plot data at fixed 20 Hz rate
     if (refresh_time < ImGui::GetTime()) {
         last_mean = frame_total / frame_count;
+        window_time += last_mean - mean[values_offset];
         mean[values_offset] = float(last_mean);
         vram[values_offset] = float(totalAvailableMemoryKb - currentAvailableMemoryKb);
         values_offset = (values_offset + 1) % value_count;
@@ -94,6 +95,8 @@ static void showOverlay() {
             ImGui::Text("Fullscreen: %s", glfwGetWindowMonitor(window) != NULL ? "Yes" : "No");
             ImGui::Text("Memory-pool allocation: %.2lf MiB", (double) memory_pool.allocated() / 1024.0 / 1024.0);
             ImGui::Text("Memory-pool usage: %.2lf MiB", (double) memory_pool.used() / 1024.0 / 1024.0);
+            ImGui::Text("Worldgen: %s", world_generator->get_name());
+            ImGui::Text("Framerate: %.1f FPS (%.2f ms/frame)", 1000 * value_count / window_time, window_time / value_count);
             //ImGui::Text("VSync: %s", "No");
         }
         if (ImGui::CollapsingHeader("Keybindings", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -106,7 +109,7 @@ static void showOverlay() {
         if (ImGui::CollapsingHeader("Advanced Charts")) {
             char overlay[256];
             sprintf(overlay, "%.3f ms/frame (%.1f FPS)", last_mean, 1000. / last_mean);
-            ImGui::PlotLines("", mean, value_count, values_offset, overlay, 0.0f, 7.0f, ImVec2(200, 60.0f));
+            ImGui::PlotLines("", mean, value_count, values_offset, overlay, 0.0f, 1.5f, ImVec2(200, 60.0f));
             sprintf(overlay, "%.2f MiB available", currentAvailableMemoryKb / 1024.);
             ImGui::PlotLines("", vram, value_count, values_offset, overlay, 0.0f, (float) totalAvailableMemoryKb, ImVec2(200, 60.0f));
         }

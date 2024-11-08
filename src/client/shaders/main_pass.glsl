@@ -125,7 +125,7 @@ void main() {
                 node_width = node_width << NODE_WIDTH_SQRT;
 
                 // update lbb
-                lbmin = uvec3(lbmin) & uvec3(~(node_width * NODE_WIDTH - 1u)); // suboptimal: lbb can be computed twice for a single dda step :/
+                lbmin = uvec3(lbmin) & uvec3(~(node_width * NODE_WIDTH - 1u));
                 lbmax = lbmin + uvec3(node_width*NODE_WIDTH);
 
                 // keeping track of the number of tree steps for reference

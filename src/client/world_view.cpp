@@ -1,6 +1,5 @@
 #include "world_view.h"
 #include "gl_util.h"
-#include "../server/worldgen.h"
 #include "../common/log.h"
 #include "../common/time.h"
 #include <cmath>
@@ -30,21 +29,9 @@ void client::world_view::init() {
     // Initializing the WorldView structure, with a single dummy node for now
     info("Initializing world view with a single %dx%dx%d region", IVY_REGION_WIDTH, IVY_REGION_WIDTH, IVY_REGION_WIDTH);
     auto t0 = time_us();
-    WorldView.region = server::worldgen::generate_region(0, 0, 0);
+    WorldView.region = world_generator->generate_region(0, 0, 0);
     WorldView.dirty = true;
     info("Done generating after %.2f ms!", double (time_us()-t0)/1e3);
-    debug("Root node has bitmask 0x%lx and header 0x%x",
-          ((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->bitmap,
-          ((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header);
-    debug("For reference, node 0x%x has bitmask 0x%lx and header 0x%x",
-          ((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header,
-          ((Node *)memory_pool.to_pointer(((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header))->bitmap,
-          ((Node *)memory_pool.to_pointer(((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header))->header)
-    debug("For reference, node 0x%x has bitmask 0x%lx and header 0x%x",
-          ((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header + uint(sizeof(Node)*2),
-          ((Node *)memory_pool.to_pointer(((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header + uint(sizeof(Node)*2)))->bitmap,
-          ((Node *)memory_pool.to_pointer(((Node *) memory_pool.to_pointer(WorldView.region->get_root_node()))->header + uint(sizeof(Node)*2)))->header)
-
 
     // Creating the buffer that will receive the WorldView data
     glCreateBuffers(1, &memory_pool_SSBO);
