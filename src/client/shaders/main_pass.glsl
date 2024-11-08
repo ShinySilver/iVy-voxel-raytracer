@@ -98,7 +98,7 @@ void main() {
         vec3 ray_sign_01 = max(ray_sign_11, 0.);
 
         // setting up the stack
-        uint stack[5];
+        uint stack[7];
         uint depth = 0;
         uint current_node_index = 0;
         Node current_node = node_pool[current_node_index];

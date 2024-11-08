@@ -1,3 +1,5 @@
+#include <cfloat>
+#include <cmath>
 #include "procedural_generator.h"
 #include "FastNoise/FastNoise.h"
 #include "../../../common/materials.h"
@@ -14,7 +16,7 @@ Region *server::ProceduralGenerator::generate_region(int rx, int ry, int rz) {
     const int height_offset = 64;
     const int height_multiplier = 32;
 
-    // Generating the heightmap
+    // Generating the full-res heightmap
     float *height_map = (float *) malloc(sizeof(float) * IVY_REGION_WIDTH * IVY_REGION_WIDTH);
     auto simplex = FastNoise::New<FastNoise::Simplex>();
     auto fractal = FastNoise::New<FastNoise::FractalFBm>();
@@ -23,11 +25,32 @@ Region *server::ProceduralGenerator::generate_region(int rx, int ry, int rz) {
     fractal->GenUniformGrid2D(height_map, 0, 0, IVY_REGION_WIDTH, IVY_REGION_WIDTH, 0.005f, 1337);
     for (int i = 0; i < IVY_REGION_WIDTH * IVY_REGION_WIDTH; i++) height_map[i] = height_offset + height_map[i] * height_multiplier;
 
+    // Generating the low-res heightmap
+    int *chunk_min = (int *) malloc(sizeof(int) * IVY_REGION_WIDTH * IVY_REGION_WIDTH);
+    int *chunk_max = (int *) malloc(sizeof(int) * IVY_REGION_WIDTH * IVY_REGION_WIDTH);
+    for (int y = ry; y < IVY_REGION_WIDTH; y += IVY_NODE_WIDTH) {
+        for (int x = rx; x < IVY_REGION_WIDTH; x += IVY_NODE_WIDTH) {
+            float min = FLT_MAX, max = FLT_MIN;
+            for (int dy = 0; dy < IVY_NODE_WIDTH; dy++) {
+                for (int dx = 0; dx < IVY_NODE_WIDTH; dx++) {
+                    float h = height_map[x + dx + (y + dy) * IVY_REGION_WIDTH];
+                    min = MIN(min, h);
+                    max = MAX(max, h);
+                }
+            }
+            chunk_min[x + y * IVY_REGION_WIDTH / IVY_NODE_WIDTH] = int((std::floor(min / IVY_NODE_WIDTH) - 1) * IVY_NODE_WIDTH);
+            chunk_max[x + y * IVY_REGION_WIDTH / IVY_NODE_WIDTH] = int(std::ceil(max / IVY_NODE_WIDTH) * IVY_NODE_WIDTH);
+        }
+    }
+
     // Using the heightmap to generate
     Region *region = new Region();
-    for (int z = rz; z < IVY_REGION_WIDTH; z += IVY_NODE_WIDTH) {
-        for (int y = ry; y < IVY_REGION_WIDTH; y += IVY_NODE_WIDTH) {
-            for (int x = rx; x < IVY_REGION_WIDTH; x += IVY_NODE_WIDTH) {
+    for (int y = ry; y < ry + IVY_REGION_WIDTH; y += IVY_NODE_WIDTH) {
+        for (int x = rx; x < rx + IVY_REGION_WIDTH; x += IVY_NODE_WIDTH) {
+            int min = chunk_min[x + y * IVY_REGION_WIDTH / IVY_NODE_WIDTH];
+            int max = chunk_max[x + y * IVY_REGION_WIDTH / IVY_NODE_WIDTH];
+            if (max < rz || min > rz + IVY_REGION_WIDTH) continue;
+            for (int z = MAX(rz, min); z <= MIN(max, rz + IVY_REGION_WIDTH); z += IVY_NODE_WIDTH) {
                 Chunk *chunk = generate_chunk(height_map, x, y, z);
                 if (chunk != nullptr) region->add_leaf_node(x - rx, y - ry, z - rz, chunk);
             }

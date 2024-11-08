@@ -77,7 +77,7 @@ endif()
 #target_link_options(iVy PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
 
 # Enabling optimization for release builds and more warnings in debugs builds
-target_compile_options(iVy PRIVATE $<$<CONFIG:Release>:-O3 -s -flto>
+target_compile_options(iVy PRIVATE $<$<CONFIG:Release>:-O3 -s -flto -march=native -mtune=native -fomit-frame-pointer>
         $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -Wformat=2 -Wtrampolines -Werror -Woverloaded-virtual -Wno-unused-parameter -Wno-unused-variable>)
 
 # Building iVy
