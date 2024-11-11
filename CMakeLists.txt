@@ -41,11 +41,6 @@ CPMAddPackage(
         OPTIONS "FASTNOISE2_NOISETOOL OFF"
 )
 CPMAddPackage(
-        NAME glad
-        GITHUB_REPOSITORY Dav1dde/glad
-        GIT_TAG v2.0.6
-)
-CPMAddPackage(
         NAME imgui
         GITHUB_REPOSITORY ocornut/imgui
         GIT_TAG v1.91.0
@@ -57,9 +52,8 @@ CPMAddPackage(
 )
 
 # Generating glad target with gl core 4.3
-set(GLAD_SOURCES_DIR ${glad_SOURCE_DIR})
-include(${glad_SOURCE_DIR}/cmake/GladConfig.cmake)
-glad_add_library(glad_gl_core_43 STATIC API gl:core=4.3)
+add_library(glad_gl_core_43 libraries/glad_gl_core_43/src/gl.c)
+target_include_directories(glad_gl_core_43 PUBLIC libraries/glad_gl_core_43/include)
 
 # Creating the imgui target
 add_library(imgui STATIC ${imgui_SOURCE_DIR}/imgui.cpp ${imgui_SOURCE_DIR}/imgui_draw.cpp ${imgui_SOURCE_DIR}/imgui_tables.cpp

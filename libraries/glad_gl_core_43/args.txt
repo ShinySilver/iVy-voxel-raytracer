@@ -1,0 +1,1 @@
+--out-path /mnt/data/iVy-bitmap-cpp20/cmake-build-debug/gladsources/glad_gl_core_43 --api gl:core=4.3 c
