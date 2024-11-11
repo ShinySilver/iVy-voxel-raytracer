@@ -1,6 +1,12 @@
 const char *main_pass_glsl = R""(
 #version 460 core
-#extension GL_NV_gpu_shader5 : enable
+#extension GL_ARB_shader_clock : enable
+
+#define SIZEOF_NODE 12
+#define NODE_WIDTH 4
+#define NODE_WIDTH_SQRT 2
+#define MINI_STEP_SIZE 4e-2f
+#define OUTPUT_TYPE 0 // 0: color, 1: time, 2: dda_steps, 3: tree_steps
 
 layout (local_size_x = 8, local_size_y = 8) in;
 layout (rgba8, binding = 0) uniform restrict writeonly image2D outImage;
@@ -11,10 +17,9 @@ uniform mat4 view_matrix;
 uniform mat4 projection_matrix;
 uniform uint tree_depth;
 
-#define SIZEOF_NODE 12 // 8 + 4
-#define NODE_WIDTH 4
-#define NODE_WIDTH_SQRT 2
-#define MINI_STEP_SIZE 4e-2f
+uniform int tree_step_limit;
+uniform int dda_step_limit;
+uniform vec3 sun_direction;
 
 struct Node{
     uint bitmask_low;
@@ -27,7 +32,7 @@ layout (std430, binding = 0) restrict readonly buffer _node_pool{
 };
 
 layout (std430, binding = 1) restrict readonly buffer _voxel_pool{
-    uint8_t voxel_pool[];
+    uint voxel_pool[];
 };
 
 // voxel palette. it mirrors materials.h
@@ -90,6 +95,13 @@ void main() {
         ray_pos += ray_dir * intersect + step_mask * ray_sign * MINI_STEP_SIZE;
     }
 
+    #if OUTPUT_TYPE == 1
+    uvec2 start = clock2x32ARB();
+    #endif
+
+    int dda_steps = 0;
+    int tree_steps = 0;
+
     // If the ray intersect the world volume, raytrace
     if (intersect >= 0) {
 
@@ -109,8 +121,6 @@ void main() {
         vec3 lbmin = vec3(0), lbmax = vec3(world_width);
         float ray_step = 0;
         bool has_collided;
-        int dda_steps = 0, dda_step_limit = 0;
-        int tree_steps = 0, tree_step_limit = 0;
 
         do {
             // while not in-local-bound, ascend the tree
@@ -159,8 +169,17 @@ void main() {
                         }
 
                         // Calculating the final surface color && applying it :)
+                        #if OUTPUT_TYPE == 0
                         vec3 color = colors[color_index-1]*dot(step_mask*vec3(0.9, 0.7, 0.4), vec3(1));
                         imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1));
+                        #elif OUTPUT_TYPE == 1
+                        uvec2 end = clock2x32ARB();
+                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4((end.x-start.x)/1000000.0f, 0, 0, 1));
+                        #elif OUTPUT_TYPE == 2
+                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/128.0f, 0, 0, 1));
+                        #elif OUTPUT_TYPE == 3
+                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/64.0f, 0, 0, 1));
+                        #endif
                         return;
                     }
 
@@ -219,6 +238,15 @@ void main() {
     }
 
     // Applying the sky color to the framebuffer
+    #if OUTPUT_TYPE == 0
     imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.69, 0.88, 0.90, 1.00));
+    #elif OUTPUT_TYPE == 1
+    uvec2 end = clock2x32ARB();
+    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(vec3(end.x-start.x, 0, 0) / 1000000.0f, 1));
+    #elif OUTPUT_TYPE == 2
+    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/128.0f, 0, 0, 1));
+    #elif OUTPUT_TYPE == 3
+    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/64.0f, 0, 0, 1));
+    #endif
 }
 )"";

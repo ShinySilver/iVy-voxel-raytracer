@@ -6,6 +6,7 @@
 #include "imgui_internal.h"
 #include "../common/log.h"
 #include "../common/world.h"
+#include "renderer.h"
 
 static void showOverlay();
 static bool is_imgui_enabled = true;
@@ -44,13 +45,10 @@ void client::gui::terminate() {
 // TODO: show/hide FPS, show/hide VRAM, show/hide RAM, show/hide controls | realtime position rotation | controls | charts
 
 static void showOverlay() {
-    const int value_count = 90;
-    const float refresh_rate = 20.0;
+    const float refresh_rate = 10.0;
     static bool p_open = true;
-    static float mean[value_count] = {}, vram[value_count] = {};
-    static int values_offset = 0;
     static double refresh_time = ImGui::GetTime() + 1.0f / refresh_rate;
-    static double frame_total = 0, frame_count = 0, last_mean = 0, window_time = 0;
+    static double frame_total = 0, frame_count = 0, last_mean = 0;
 
     // Update the window
     ImGuiIO &io = ImGui::GetIO();
@@ -75,11 +73,7 @@ static void showOverlay() {
 
     // Create plot data at fixed 20 Hz rate
     if (refresh_time < ImGui::GetTime()) {
-        last_mean = frame_total / frame_count;
-        window_time += last_mean - mean[values_offset];
-        mean[values_offset] = float(last_mean);
-        vram[values_offset] = float(totalAvailableMemoryKb - currentAvailableMemoryKb);
-        values_offset = (values_offset + 1) % value_count;
+        last_mean = last_mean * 0.8 + 0.2 * frame_total / frame_count; // sliding average
         refresh_time += 1.0f / refresh_rate;
         frame_total = 0, frame_count = 0;
     } else {
@@ -96,7 +90,19 @@ static void showOverlay() {
             ImGui::Text("Memory-pool allocation: %.2lf MiB", (double) memory_pool.allocated() / 1024.0 / 1024.0);
             ImGui::Text("Memory-pool usage: %.2lf MiB", (double) memory_pool.used() / 1024.0 / 1024.0);
             ImGui::Text("Worldgen: %s", world_generator->get_name());
-            ImGui::Text("Framerate: %.1f FPS (%.2f ms/frame)", 1000 * value_count / window_time, window_time / value_count);
+            ImGui::Text("Framerate: %.1f FPS (%.2f ms/frame)", 1000 / last_mean, last_mean);
+
+            static const char *items[]{"Unlimited", "8", "16", "32", "64", "128"};
+            static int dda_selected = 0, tree_selected = 0;
+            float width = ImGui::CalcTextSize(items[0]).x + 2 * ImGui::GetTextLineHeightWithSpacing();
+            ImGui::SetNextItemWidth(width);
+            if (ImGui::Combo("Max DDA Steps", &dda_selected, items, IM_ARRAYSIZE(items))) {
+                client::renderer::set_dda_step_limit(dda_selected > 0 ? 0x4 << dda_selected : 0);
+            }
+            ImGui::SetNextItemWidth(width);
+            if (ImGui::Combo("Max Tree Steps", &tree_selected, items, IM_ARRAYSIZE(items))) {
+                client::renderer::set_tree_step_limit(tree_selected > 0 ? 0x4 << tree_selected : 0);
+            }
             //ImGui::Text("VSync: %s", "No");
         }
         if (ImGui::CollapsingHeader("Keybindings", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -105,13 +111,6 @@ static void showOverlay() {
             ImGui::Text("LeftAlt: Unlock mouse cursor");
             ImGui::Text("F3: Toggle this interface");
             ImGui::Text("F11: Toggle fullscreen");
-        }
-        if (ImGui::CollapsingHeader("Advanced Charts")) {
-            char overlay[256];
-            sprintf(overlay, "%.3f ms/frame (%.1f FPS)", last_mean, 1000. / last_mean);
-            ImGui::PlotLines("", mean, value_count, values_offset, overlay, 0.0f, 1.5f, ImVec2(200, 60.0f));
-            sprintf(overlay, "%.2f MiB available", currentAvailableMemoryKb / 1024.);
-            ImGui::PlotLines("", vram, value_count, values_offset, overlay, 0.0f, (float) totalAvailableMemoryKb, ImVec2(200, 60.0f));
         }
     }
     ImGui::End();

@@ -6,9 +6,9 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(CMAKE_GENERATOR Ninja)
-set(CMAKE_MAKE_PROGRAM ninja)
-set(CMAKE_CXX_COMPILER /usr/bin/g++-13)
+#set(CMAKE_GENERATOR Ninja)
+#set(CMAKE_MAKE_PROGRAM ninja)
+#set(CMAKE_CXX_COMPILER /usr/bin/g++-13)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 23)
