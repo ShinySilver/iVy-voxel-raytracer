@@ -73,7 +73,7 @@ static void showOverlay() {
 
     // Create plot data at fixed 20 Hz rate
     if (refresh_time < ImGui::GetTime()) {
-        last_mean = last_mean * 0.8 + 0.2 * frame_total / frame_count; // sliding average
+        last_mean = frame_total / frame_count;
         refresh_time += 1.0f / refresh_rate;
         frame_total = 0, frame_count = 0;
     } else {
