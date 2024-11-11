@@ -1,4 +1,6 @@
 # iVy-voxel-raytracer
+Tested with ninja 1.10.1 and g++-13, on Linux. Untested on Windows.
+
 In order to install:
 ```sh
 $ git clone https://github.com/ShinySilver/iVy-voxel-raytracer # Clone this repository
