@@ -5,11 +5,11 @@ In order to install and run:
 ```sh
 git clone https://github.com/ShinySilver/iVy-voxel-raytracer # Clone this repository
 cd iVy-voxel-raytracer # Enter the newly-created folder
-cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release
-cd build
-ninja iVy
-chmod +x iVy
-./iVy
+cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release # Use cmake to setup the build
+cd build # Enter the build folder
+ninja iVy # Build
+chmod +x iVy # On linux, you need to autorise running the executable before running it
+./iVy # Run the engine
 ```
 If you are using X11 or Wayland, you [might need to install a few dependencies for GLFW to work](https://www.glfw.org/docs/latest/compile.html#compile_deps_wayland).
 
