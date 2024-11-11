@@ -16,4 +16,4 @@ If you have more than one graphics card, you might need to select it manually. F
 __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia ./iVy
 ```
 
-At last, you can change the world size in [world.h, line 11](https://github.com/ShinySilver/iVy-voxel-raytracer/blob/337da9989cc87340be05e278487890246eb918cc/src/common/world.h#L12C9-L12C30). 5 means 4**5=1024 voxels, 6 is 4096, 7 is 16384.
+At last, you can change the world size in [world.h, line 11](https://github.com/ShinySilver/iVy-voxel-raytracer/blob/master/src/common/world.h#L12C9-L12C30). 5 means 4**5=1024 voxels, 6 is 4096, 7 is 16384.
