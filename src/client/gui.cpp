@@ -91,17 +91,33 @@ static void showOverlay() {
             ImGui::Text("Memory-pool usage: %.2lf MiB", (double) memory_pool.used() / 1024.0 / 1024.0);
             ImGui::Text("Worldgen: %s", world_generator->get_name());
             ImGui::Text("Framerate: %.1f FPS (%.2f ms/frame)", 1000 / last_mean, last_mean);
+        }
 
+        if (ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
             static const char *items[]{"Unlimited", "8", "16", "32", "64", "128"};
             static int dda_selected = 0, tree_selected = 0;
             float width = ImGui::CalcTextSize(items[0]).x + 2 * ImGui::GetTextLineHeightWithSpacing();
             ImGui::SetNextItemWidth(width);
-            if (ImGui::Combo("Max DDA Steps", &dda_selected, items, IM_ARRAYSIZE(items))) {
+            if (ImGui::Combo("Max DDA Steps (?)", &dda_selected, items, IM_ARRAYSIZE(items))) {
                 client::renderer::set_dda_step_limit(dda_selected > 0 ? 0x4 << dda_selected : 0);
             }
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                ImGui::TextUnformatted("Limit the number of DDA steps.\nWhen reached, pixels are rendered red.");
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
             ImGui::SetNextItemWidth(width);
-            if (ImGui::Combo("Max Tree Steps", &tree_selected, items, IM_ARRAYSIZE(items))) {
+            if (ImGui::Combo("Max Tree Steps (?)", &tree_selected, items, IM_ARRAYSIZE(items))) {
                 client::renderer::set_tree_step_limit(tree_selected > 0 ? 0x4 << tree_selected : 0);
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+                ImGui::TextUnformatted("Limit the number of 64-Tree node ascents/descents.\nWhen reached, pixels are rendered either\ngreen (for ascents) or blue (for descents).");
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
             }
             //ImGui::Text("VSync: %s", "No");
         }
