@@ -1,5 +1,5 @@
 # iVy-voxel-raytracer
-Tested with cmake 3.22.1, ninja 1.10.1 and g++-13, on Linux. Untested on Windows.
+Tested with cmake 3.22.1, ninja 1.10.1 and gcc 13.1.0, on Linux. Untested on Windows. Some issues were reported when building with older versions of gcc, in which case you can try swapping to clang or another compiler.
 
 In order to install and run:
 ```sh
