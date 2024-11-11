@@ -11,7 +11,7 @@ cmake -DCMAKE_BUILD_TYPE=Release .. && make -j8 # Build.
 ```
 If you are using X11 or Wayland, you [might need to install a few dependencies for GLFW to work](https://www.glfw.org/docs/latest/compile.html#compile_deps_wayland).
 
-If you have more than one graphics card, you might need to select it manually. For example:
+If you have more than one graphics card, you might need to select it manually. For instance, in order to use my NVIDIA graphics card I have to start the engine with the following command:
 ```sh
 __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia ./iVy
 ```
