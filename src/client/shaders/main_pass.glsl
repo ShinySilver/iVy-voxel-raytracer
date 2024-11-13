@@ -5,7 +5,7 @@ const char *main_pass_glsl = R""(
 #define SIZEOF_NODE 12
 #define NODE_WIDTH 4
 #define NODE_WIDTH_SQRT 2
-#define MINI_STEP_SIZE 4e-2f
+#define MINI_STEP_SIZE 5e-3f
 #define OUTPUT_TYPE 0 // 0: color, 1: time, 2: dda_steps, 3: tree_steps
 
 layout (local_size_x = 8, local_size_y = 8) in;
@@ -31,10 +31,6 @@ layout (std430, binding = 0) restrict readonly buffer _node_pool{
     Node node_pool[];
 };
 
-layout (std430, binding = 1) restrict readonly buffer _voxel_pool{
-    uint voxel_pool[];
-};
-
 // voxel palette. it mirrors materials.h
 vec3 colors[] = {
     vec3(1.00, 0.40, 0.40), // DEBUG_RED
@@ -44,13 +40,13 @@ vec3 colors[] = {
     vec3(0.42, 0.32, 0.25), // DIRT
     vec3(0.30, 0.59, 0.31)  // GRASS
 };
-
+        
 vec3 getRayDir(ivec2 screen_position) {
-    vec2 screenSpace = (screen_position + vec2(0.5)) / vec2(screen_size);
-    screenSpace.y = 1.0 - screenSpace.y;
-    vec4 clipSpace = vec4(screenSpace * 2.0f - 1.0f, - 1.0, 1.0);
-    vec4 eyeSpace = vec4(vec2(inverse(projection_matrix) * clipSpace), -1.0, 0.0);
-    return normalize(vec3(inverse(view_matrix) * eyeSpace));
+    vec2 screen_space = (screen_position + vec2(0.5)) / vec2(screen_size);
+    screen_space.y = 1.0 - screen_space.y;
+    vec4 clip_space = vec4(screen_space * 2.0f - 1.0f, - 1.0, 1.0);
+    vec4 eye_space = vec4(vec2(inverse(projection_matrix) * clip_space), -1.0, 0.0);
+    return normalize(vec3(inverse(view_matrix) * eye_space));
 }
 
 float AABBIntersect(vec3 bmin, vec3 bmax, vec3 orig, vec3 invdir, out vec3 aabb_mask) {
@@ -95,19 +91,15 @@ void main() {
         ray_pos += ray_dir * intersect + step_mask * ray_sign * MINI_STEP_SIZE;
     }
 
+    // setting up a few variables that are used for alternative output modes
     #if OUTPUT_TYPE == 1
     uvec2 start = clock2x32ARB();
     #endif
-
     int dda_steps = 0;
     int tree_steps = 0;
 
-    // If the ray intersect the world volume, raytrace
+    // if the ray intersect the world volume, raytrace
     if (intersect >= 0) {
-
-        // precomputing a few constants
-        vec3 ray_sign_11 = vec3(sign11(ray_dir.x), sign11(ray_dir.y), sign11(ray_dir.z));
-        vec3 ray_sign_01 = max(ray_sign_11, 0.);
 
         // setting up the stack
         uint stack[7];
@@ -117,6 +109,8 @@ void main() {
         stack[depth] = current_node_index;
 
         // defining a few variables that will be useful in the traversal
+        vec3 ray_sign_11 = vec3(sign11(ray_dir.x), sign11(ray_dir.y), sign11(ray_dir.z));
+        vec3 ray_sign_01 = max(ray_sign_11, 0.);
         uint node_width = uint(world_width) >> NODE_WIDTH_SQRT;
         vec3 lbmin = vec3(0), lbmax = vec3(world_width);
         float ray_step = 0;
@@ -176,7 +170,7 @@ void main() {
                         uvec2 end = clock2x32ARB();
                         imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4((end.x-start.x)/1000000.0f, 0, 0, 1));
                         #elif OUTPUT_TYPE == 2
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/128.0f, 0, 0, 1));
+                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/16.0f, 0, 0, 1));
                         #elif OUTPUT_TYPE == 3
                         imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/64.0f, 0, 0, 1));
                         #endif
@@ -223,28 +217,28 @@ void main() {
             }
 
             // dda step
-            vec3 tmax = inverted_ray_dir * (node_width * ray_sign_01 - mod(ray_pos, node_width));
-            ray_step = min(tmax.x, min(tmax.y, tmax.z));
-            ray_pos += ray_dir * ray_step;
+            vec3 side_dist = inverted_ray_dir * (node_width * ray_sign_01 - mod(ray_pos, node_width));
+            ray_step = min(side_dist.x, min(side_dist.y, side_dist.z));
+            ray_pos += ray_dir * max(0, ray_step-MINI_STEP_SIZE*0.9);
 
             // mini-step + normal extraction
-            step_mask = vec3(equal(vec3(ray_step), tmax));
+            step_mask = vec3(equal(vec3(ray_step), side_dist));
             ray_pos += MINI_STEP_SIZE * ray_sign * step_mask;
 
-            // Keeping track of the number of DDA step for reference
+            // keeping track of the number of DDA step for reference
             dda_steps+=1;
             if(dda_steps == dda_step_limit){imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[0], 1.00)); return;}
         } while(all(greaterThanEqual(ray_pos, bmin)) && all(lessThan(ray_pos, bmax))); // while in global-bound
     }
 
-    // Applying the sky color to the framebuffer
+    // applying the sky color to the framebuffer
     #if OUTPUT_TYPE == 0
     imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.69, 0.88, 0.90, 1.00));
     #elif OUTPUT_TYPE == 1
     uvec2 end = clock2x32ARB();
     imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(vec3(end.x-start.x, 0, 0) / 1000000.0f, 1));
     #elif OUTPUT_TYPE == 2
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/128.0f, 0, 0, 1));
+    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/16.0f, 0, 0, 1));
     #elif OUTPUT_TYPE == 3
     imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/64.0f, 0, 0, 1));
     #endif

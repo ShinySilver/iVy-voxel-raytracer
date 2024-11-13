@@ -15,6 +15,7 @@ Region *server::ProceduralGenerator::generate_region(int rx, int ry, int rz) {
     // Heightmap parameters
     const int height_offset = 64;
     const int height_multiplier = 32;
+    const int scale_multiplier = 1;
 
     // Generating the full-res heightmap
     float *height_map = (float *) malloc(sizeof(float) * IVY_REGION_WIDTH * IVY_REGION_WIDTH);
@@ -22,7 +23,7 @@ Region *server::ProceduralGenerator::generate_region(int rx, int ry, int rz) {
     auto fractal = FastNoise::New<FastNoise::FractalFBm>();
     fractal->SetSource(simplex);
     fractal->SetOctaveCount(5);
-    fractal->GenUniformGrid2D(height_map, 0, 0, IVY_REGION_WIDTH, IVY_REGION_WIDTH, 0.005f, 1337);
+    fractal->GenUniformGrid2D(height_map, 0, 0, IVY_REGION_WIDTH, IVY_REGION_WIDTH, 0.005f/scale_multiplier, 1337);
     for (int i = 0; i < IVY_REGION_WIDTH * IVY_REGION_WIDTH; i++) height_map[i] = height_offset + height_map[i] * height_multiplier;
 
     // Generating the low-res heightmap
