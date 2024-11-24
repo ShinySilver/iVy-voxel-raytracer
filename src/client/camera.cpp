@@ -4,7 +4,7 @@
 #include "../common/world.h"
 
 namespace client::camera {
-    glm::vec3 position{500, 1200, 500}, direction{0.6f, -0.66f, 0.6f};
+    glm::vec3 position{IVY_REGION_WIDTH/8, IVY_REGION_WIDTH*2/3, IVY_REGION_WIDTH/8}, direction{0.6f, -0.66f, 0.6f};
     glm::mat4 view_matrix{};
 }
 

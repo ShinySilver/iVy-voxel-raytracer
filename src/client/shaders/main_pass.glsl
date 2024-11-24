@@ -1,4 +1,4 @@
-const char *main_pass_glsl = R""(
+const char main_pass_glsl[] = R""(
 #version 460 core
 #extension GL_ARB_shader_clock : enable
 
@@ -6,7 +6,11 @@ const char *main_pass_glsl = R""(
 #define NODE_WIDTH 4
 #define NODE_WIDTH_SQRT 2
 #define MINI_STEP_SIZE 5e-3f
-#define OUTPUT_TYPE 0 // 0: color, 1: time, 2: dda_steps, 3: tree_steps
+
+#define OUTPUT_TYPE %d // 0: color, 1: time, 2: dda_steps, 3: tree_steps
+#define OUTPUT_DDA_STEPS_COLOR_SATURATION 64.0f
+#define OUTPUT_TREE_STEPS_COLOR_SATURATION 32.0f
+#define OUTPUT_TIME_COLOR_SATURATION 100000.0f
 
 layout (local_size_x = 8, local_size_y = 8) in;
 layout (rgba8, binding = 0) uniform restrict writeonly image2D outImage;
@@ -168,11 +172,11 @@ void main() {
                         imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1));
                         #elif OUTPUT_TYPE == 1
                         uvec2 end = clock2x32ARB();
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4((end.x-start.x)/1000000.0f, 0, 0, 1));
+                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4((end.x-start.x)/OUTPUT_TIME_COLOR_SATURATION, 0, 0, 1));
                         #elif OUTPUT_TYPE == 2
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/16.0f, 0, 0, 1));
+                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/OUTPUT_DDA_STEPS_COLOR_SATURATION, 0, 0, 1));
                         #elif OUTPUT_TYPE == 3
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/64.0f, 0, 0, 1));
+                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/OUTPUT_TREE_STEPS_COLOR_SATURATION, 0, 0, 1));
                         #endif
                         return;
                     }
@@ -236,11 +240,11 @@ void main() {
     imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.69, 0.88, 0.90, 1.00));
     #elif OUTPUT_TYPE == 1
     uvec2 end = clock2x32ARB();
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(vec3(end.x-start.x, 0, 0) / 1000000.0f, 1));
+    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(vec3(end.x-start.x, 0, 0) / OUTPUT_TIME_COLOR_SATURATION, 1));
     #elif OUTPUT_TYPE == 2
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/16.0f, 0, 0, 1));
+    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/OUTPUT_DDA_STEPS_COLOR_SATURATION, 0, 0, 1));
     #elif OUTPUT_TYPE == 3
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/64.0f, 0, 0, 1));
+    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/OUTPUT_TREE_STEPS_COLOR_SATURATION, 0, 0, 1));
     #endif
 }
 )"";

@@ -42,8 +42,6 @@ void client::gui::terminate() {
     ImGui::DestroyContext();
 }
 
-// TODO: show/hide FPS, show/hide VRAM, show/hide RAM, show/hide controls | realtime position rotation | controls | charts
-
 static void showOverlay() {
     const float refresh_rate = 10.0;
     static bool p_open = true;
@@ -53,10 +51,9 @@ static void showOverlay() {
     // Update the window
     ImGuiIO &io = ImGui::GetIO();
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-    const float PAD = 10.0f;
     const ImGuiViewport *viewport = ImGui::GetMainViewport();
     ImVec2 work_pos = viewport->WorkPos;
-    ImVec2 window_pos = {work_pos.x + PAD, work_pos.y + PAD};
+    ImVec2 window_pos = {work_pos.x + 10.0f, work_pos.y + 10.0f};
     ImVec2 window_pos_pivot = {0, 0};
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     window_flags |= ImGuiWindowFlags_NoMove;
@@ -86,7 +83,7 @@ static void showOverlay() {
         if (ImGui::CollapsingHeader("Debug stats", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("Position: (%.2f; %.2f; %.2f)", client::camera::position.x, client::camera::position.y, client::camera::position.z);
             ImGui::Text("Direction: (%.2f; %.2f; %.2f)", client::camera::direction.x, client::camera::direction.y, client::camera::direction.z);
-            ImGui::Text("Fullscreen: %s", glfwGetWindowMonitor(window) != NULL ? "Yes" : "No");
+            ImGui::Text("Window resolution: %dx%d (%s)", int(viewport->Size.x), int(viewport->Size.y), glfwGetWindowMonitor(window) != NULL ? "Fullscreen" : "Windowed");
             ImGui::Text("Memory-pool allocation: %.2lf MiB", (double) memory_pool.allocated() / 1024.0 / 1024.0);
             ImGui::Text("Memory-pool usage: %.2lf MiB", (double) memory_pool.used() / 1024.0 / 1024.0);
             ImGui::Text("Worldgen: %s", world_generator->get_name());
@@ -95,7 +92,9 @@ static void showOverlay() {
 
         if (ImGui::CollapsingHeader("Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
             static const char *items[]{"Unlimited", "8", "16", "32", "64", "128"};
-            static int dda_selected = 0, tree_selected = 0;
+            static const char *render_types[]{"Default", "Wave time", "DDA steps", "Tree steps"};
+            static const char *enabled_disabled[]{"Disabled", "Enabled"};
+            static int dda_selected = 0, tree_selected = 0, renderer_selected = 0, vsync = 0;
             float width = ImGui::CalcTextSize(items[0]).x + 2 * ImGui::GetTextLineHeightWithSpacing();
             ImGui::SetNextItemWidth(width);
             if (ImGui::Combo("Max DDA Steps (?)", &dda_selected, items, IM_ARRAYSIZE(items))) {
@@ -119,10 +118,18 @@ static void showOverlay() {
                 ImGui::PopTextWrapPos();
                 ImGui::EndTooltip();
             }
-            //ImGui::Text("VSync: %s", "No");
+            ImGui::SetNextItemWidth(width);
+            if (ImGui::Combo("Renderer type", &renderer_selected, render_types, IM_ARRAYSIZE(render_types))) {
+                client::renderer::set_render_type(RenderType(renderer_selected));
+            }
+            ImGui::SetNextItemWidth(width);
+            if (ImGui::Combo("Vertical Synchronization", &vsync, enabled_disabled, IM_ARRAYSIZE(enabled_disabled))) {
+                client::context::set_vsync_enabled(vsync > 0);
+            }
         }
         if (ImGui::CollapsingHeader("Keybindings", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("WASD: Moving");
+            ImGui::Text("LeftShift+WASD: Moving faster");
             ImGui::Text("Space/LeftCtrl: Up/Down");
             ImGui::Text("LeftAlt: Unlock mouse cursor");
             ImGui::Text("F3: Toggle this interface");

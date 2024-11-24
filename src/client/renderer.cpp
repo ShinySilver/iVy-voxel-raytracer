@@ -5,9 +5,10 @@
 #include "camera.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "shaders/main_pass.glsl"
+#include "../common/log.h"
 
 // internal variables
-static GLFWwindow *window = 0;
+static GLFWwindow *window = nullptr;
 static GLuint main_pass_shader = 0;
 static GLuint framebuffer = 0, framebuffer_texture = 0;
 static glm::mat4 projection_matrix = {};
@@ -23,7 +24,9 @@ static glm::vec3 sun_direction = {};
 
 void client::renderer::init(GLFWwindow *glfwWindow) {
     window = glfwWindow;
-    main_pass_shader = build_program(main_pass_glsl, GL_COMPUTE_SHADER);
+    char templated_shader_code[sizeof(main_pass_glsl)];
+    snprintf(templated_shader_code, sizeof(main_pass_glsl), main_pass_glsl, 0);
+    main_pass_shader = build_program(templated_shader_code, GL_COMPUTE_SHADER);
     glCreateFramebuffers(1, &framebuffer);
     glfwGetWindowSize(window, &framebuffer_resolution_x, &framebuffer_resolution_y);
     render_framebuffer_size_callback(window, framebuffer_resolution_x, framebuffer_resolution_y);
@@ -54,6 +57,13 @@ void client::renderer::render() {
 void client::renderer::terminate() {
     glDeleteProgram(main_pass_shader);
     glDeleteFramebuffers(1, &framebuffer);
+}
+
+void client::renderer::set_render_type(RenderType type){
+    glDeleteProgram(main_pass_shader);
+    char templated_shader_code[sizeof(main_pass_glsl)];
+    snprintf(templated_shader_code, sizeof(main_pass_glsl), main_pass_glsl, int(type));
+    main_pass_shader = build_program(templated_shader_code, GL_COMPUTE_SHADER);
 }
 
 void client::renderer::set_tree_step_limit(int i) {

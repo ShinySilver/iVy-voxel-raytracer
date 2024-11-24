@@ -14,6 +14,7 @@ typedef struct {
 
 static KeyEventEntry *key_listeners = 0, *mouse_listeners = 0;
 static int key_listeners_count = 0, mouse_listeners_count = 0;
+static bool vsync_enabled = false;
 
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 static void mouse_button_callback(GLFWwindow *window, int button, int action, int mods);
@@ -50,7 +51,7 @@ GLFWwindow *client::context::init() {
         fatal("Failed to create GLFW window");
     }
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0);
+    glfwSwapInterval(vsync_enabled?1:0);
 
     /**
      * Initializing GLAD
@@ -78,10 +79,17 @@ GLFWwindow *client::context::init() {
     }
 
     /**
-     * registering key callbacks
+     * Registering key callbacks
      */
     glfwSetKeyCallback(window, key_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
+
+    /**
+     * Renaming the window to include graphics card model, which is too verbose to include in our debug menu
+     */
+    char win_title[128];
+    snprintf(win_title, 128, "iVy - %s", glGetString(GL_RENDERER));
+    glfwSetWindowTitle(window, win_title);
 
     return window;
 }
@@ -117,6 +125,12 @@ void client::context::toggle_fullscreen(){
                              GLFW_DONT_CARE);
         glfwSetWindowPos(window, win_x, win_y);
     }
+    glfwSwapInterval(vsync_enabled?1:0);
+}
+
+void client::context::set_vsync_enabled(bool _vsync_enabled){
+    vsync_enabled = _vsync_enabled;
+    glfwSwapInterval(_vsync_enabled?1:0);
 }
 
 static void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mods) {
