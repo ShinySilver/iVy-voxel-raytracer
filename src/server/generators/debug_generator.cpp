@@ -1,6 +1,6 @@
 #include "debug_generator.h"
-#include "../../../common/materials.h"
-#include "../../../common/log.h"
+#include "../../common/materials.h"
+#include "ivy_log.h"
 
 static Voxel get_voxel(int x, int y, int z);
 static Chunk *generate_chunk(int x, int y, int z);

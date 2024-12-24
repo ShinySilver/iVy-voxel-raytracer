@@ -1,14 +1,12 @@
 #include "server.h"
-#include "features/generators/debug_generator.h"
-#include "features/generators/procedural_generator.h"
-#include "../common/log.h"
-#include "../common/time.h"
+#include "generators/debug_generator.h"
+#include "generators/procedural_generator.h"
+#include "ivy_log.h"
 
 // TODO: Everything :)
 
 void server::start() {
     if (world_generator == nullptr) {
-        auto t0 = time_us();
         //world_generator = new DebugGenerator();
         world_generator = new ProceduralGenerator();
     }

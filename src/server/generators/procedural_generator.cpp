@@ -2,7 +2,7 @@
 #include <cmath>
 #include "procedural_generator.h"
 #include "FastNoise/FastNoise.h"
-#include "../../../common/materials.h"
+#include "../../common/materials.h"
 
 static Voxel get_voxel(float *heightmap, int x, int y, int z);
 static Chunk *generate_chunk(float *heightmap, int x, int y, int z);

@@ -2,6 +2,7 @@
 #include "camera.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "../common/world.h"
+#include "gui/chat.h"
 
 namespace client::camera {
     glm::vec3 position{IVY_REGION_WIDTH/4, 128, IVY_REGION_WIDTH/4}, direction{0.6f, -0.66f, 0.6f};
@@ -19,6 +20,18 @@ void client::camera::update(GLFWwindow *window) {
     float delta_time = std::chrono::duration<float>(t1 - t0).count();
     t0 = t1;
 
+    // Keeping track of the mouse
+    static double oldPosX = 0.0, oldPosY = 0.0;
+    double posX, posY;
+    glfwGetCursorPos(window, &posX, &posY);
+
+    // no camera movement while writing in the chat & when exiting the chat
+    if(gui::chat::is_enabled){
+        oldPosX = posX;
+        oldPosY = posY;
+        return;
+    }
+
     float speed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? CAMERA_FAST_SPEED * CAMERA_SPEED_MODIFIER : CAMERA_BASE_SPEED * CAMERA_SPEED_MODIFIER;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) position += direction * delta_time * speed;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) position -= direction * delta_time * speed;
@@ -31,9 +44,6 @@ void client::camera::update(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) position -= up * delta_time * speed;
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) position += up * delta_time * speed;
 
-    static double oldPosX = 0.0, oldPosY = 0.0;
-    double posX, posY;
-    glfwGetCursorPos(window, &posX, &posY);
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) || glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         direction = normalize(direction - right * float((posX - oldPosX) * CAMERA_MOUSE_SENSITIVITY / 1000.0f));
         direction = normalize(direction - glm::vec3{0, 1, 0} * float((posY - oldPosY) * CAMERA_MOUSE_SENSITIVITY * 2 / 1000.0f));

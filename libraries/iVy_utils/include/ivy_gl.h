@@ -4,7 +4,7 @@
 #include "glad/gl.h"
 #include "GLFW/glfw3.h"
 
-namespace client {
+namespace client::util {
     /**
      * @param width The width of the texture to create, in pixels
      * @param height The height of the texture to create, in pixels

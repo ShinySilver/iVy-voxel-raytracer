@@ -1,9 +1,9 @@
-#include "gl_util.h"
-#include "../common/log.h"
+#include "../include/ivy_gl.h"
+#include "../include/ivy_log.h"
 
 static uint32_t build_shader(const char *code, GLenum shaderType);
 
-uint32_t client::create_texture(uint32_t width, uint32_t height, uint32_t glInternalFormat, uint32_t glFilter){
+uint32_t client::util::create_texture(uint32_t width, uint32_t height, uint32_t glInternalFormat, uint32_t glFilter){
     uint32_t texture_handle;
     glCreateTextures(GL_TEXTURE_2D, 1, &texture_handle);
     glTextureParameteri(texture_handle, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -17,7 +17,7 @@ uint32_t client::create_texture(uint32_t width, uint32_t height, uint32_t glInte
     return texture_handle;
 }
 
-uint32_t client::build_pipeline(const char *vertexShaderCode, const char *fragmentShaderCode) {
+uint32_t client::util::build_pipeline(const char *vertexShaderCode, const char *fragmentShaderCode) {
     uint32_t vertShader = build_shader(vertexShaderCode, GL_VERTEX_SHADER);
     uint32_t fragShader = build_shader(fragmentShaderCode, GL_FRAGMENT_SHADER);
 
@@ -41,7 +41,7 @@ uint32_t client::build_pipeline(const char *vertexShaderCode, const char *fragme
     return shaderProgram;
 }
 
-uint32_t client::build_program(const char *shaderCode, GLenum shaderType) {
+uint32_t client::util::build_program(const char *shaderCode, GLenum shaderType) {
     uint32_t shader = build_shader(shaderCode, shaderType);
 
     uint32_t shaderProgram = glCreateProgram();

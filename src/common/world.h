@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include "utils/memory_pool.h"
+#include "memory_pool.h"
 
 #define IVY_NODE_WIDTH (4l)
 #define IVY_NODE_WIDTH_SQRT (2)
@@ -13,7 +13,6 @@
 #define IVY_REGION_WIDTH (0x1l<<(IVY_NODE_WIDTH_SQRT*IVY_REGION_TREE_DEPTH))
 
 class Generator;
-
 extern FastMemoryPool memory_pool;
 extern Generator *world_generator;
 

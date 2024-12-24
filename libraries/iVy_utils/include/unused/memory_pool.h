@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "../../log.h"
+#include "../../../../libraries/ivy_util/include/ivy_log.h"
 
 // TODO: Multithreaded access through the MemoryAccess class
 // TODO: Multiple size support in ... VoxelPool class? And a NodePool specialization?

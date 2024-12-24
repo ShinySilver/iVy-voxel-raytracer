@@ -1,7 +1,8 @@
 #include "world.h"
-#include "log.h"
+#include "ivy_log.h"
 #include "materials.h"
 #include <cmath>
+#include <cassert>
 
 FastMemoryPool memory_pool = FastMemoryPool();
 Generator *world_generator = nullptr;

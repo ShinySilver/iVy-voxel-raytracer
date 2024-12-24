@@ -12,7 +12,7 @@ enum RenderType : int {
 };
 
 namespace client::renderer {
-    void init(GLFWwindow *window);
+    void init();
     void render();
     void terminate();
     void set_render_type(RenderType type = DEFAULT);

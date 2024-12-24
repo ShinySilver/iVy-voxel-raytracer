@@ -1,15 +1,16 @@
 #include "gui.h"
-#include "camera.h"
-#include "context.h"
+#include "../camera.h"
+#include "../context.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
-#include "../common/log.h"
-#include "../common/world.h"
-#include "renderer.h"
+#include "../../../libraries/ivy_util/include/ivy_log.h"
+#include "../../common/world.h"
+#include "../common/console.h"
+#include "../renderer.h"
 
 static void showOverlay();
-static bool is_imgui_enabled = true;
+static bool is_debug_enabled = true;
 static GLFWwindow *window;
 
 void client::gui::init(GLFWwindow *glfwWindow) {
@@ -22,16 +23,16 @@ void client::gui::init(GLFWwindow *glfwWindow) {
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 430");
-    context::register_key_callback(GLFW_KEY_F3, [](int action) { if (action == GLFW_PRESS) is_imgui_enabled = !is_imgui_enabled; });
+    context::register_key_callback(GLFW_KEY_F3, [](int action) { if (action == GLFW_PRESS) is_debug_enabled = !is_debug_enabled; });
     info("Initialized ImGui %s", IMGUI_VERSION);
 }
 
 void client::gui::render() {
-    if (!is_imgui_enabled) return;
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    showOverlay();
+    if (is_debug_enabled) showOverlay();
+    console::render(window);
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -68,7 +69,7 @@ static void showOverlay() {
     glGetIntegerv(GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, &totalAvailableMemoryKb);
     glGetError(); // Just in case the above extension was not supported by the GPU
 
-    // Create plot data at fixed 20 Hz rate
+    // Computing average framerate at fixed 20 Hz rate
     if (refresh_time < ImGui::GetTime()) {
         last_mean = frame_total / frame_count;
         refresh_time += 1.0f / refresh_rate;
@@ -78,7 +79,7 @@ static void showOverlay() {
         frame_count += 1;
     }
 
-    // Draw the plots
+    // Plot everything
     if (ImGui::Begin("Simple overlay", &p_open, window_flags)) {
         if (ImGui::CollapsingHeader("Debug stats", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("Position: (%.2f; %.2f; %.2f)", client::camera::position.x, client::camera::position.y, client::camera::position.z);
@@ -87,6 +88,7 @@ static void showOverlay() {
             ImGui::Text("Memory-pool allocation: %.2lf MiB", (double) memory_pool.allocated() / 1024.0 / 1024.0);
             ImGui::Text("Memory-pool usage: %.2lf MiB", (double) memory_pool.used() / 1024.0 / 1024.0);
             ImGui::Text("Worldgen: %s", world_generator->get_name());
+            ImGui::Text("Console: %s", console::is_chat_open() ? "Opened" : "Closed");
             ImGui::Text("Framerate: %.1f FPS (%.2f ms/frame)", 1000 / last_mean, last_mean);
         }
 
@@ -132,9 +134,17 @@ static void showOverlay() {
             ImGui::Text("LeftShift+WASD: Moving faster");
             ImGui::Text("Space/LeftCtrl: Up/Down");
             ImGui::Text("LeftAlt: Unlock mouse cursor");
+            ImGui::Text("Enter: Open chat");
             ImGui::Text("F3: Toggle this interface");
             ImGui::Text("F11: Toggle fullscreen");
         }
     }
     ImGui::End();
+}
+
+void client::gui::GUI::enable() {
+
+}
+void client::gui::GUI::disable() {
+
 }

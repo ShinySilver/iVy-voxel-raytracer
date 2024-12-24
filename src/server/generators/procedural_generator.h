@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../common/world.h"
+#include "../../common/world.h"
 
 namespace server {
     class ProceduralGenerator : public Generator {

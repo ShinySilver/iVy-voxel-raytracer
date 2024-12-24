@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 project(iVy)
 
+# Default build type is "Release" for increased performance
 if (NOT CMAKE_BUILD_TYPE)
     message("Build Type not set, defaulting to Release")
     set(CMAKE_BUILD_TYPE Release)
@@ -10,18 +11,23 @@ endif()
 #set(CMAKE_MAKE_PROGRAM ninja)
 #set(CMAKE_CXX_COMPILER /usr/bin/g++-13)
 
+# CMake configuration
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_SCAN_FOR_MODULES)
 set(BUILD_SHARED_LIBS OFF)
 set(CPM_USE_NAMED_CACHE_DIRECTORIES ON)
 set(CMAKE_SOURCE_DIR src/)
-file(GLOB_RECURSE IVY_TEST_FILES tests/**.cpp)
-file(GLOB_RECURSE IVY_SRC_FILES src/**.cpp src/**.glsl)
-add_executable(iVy src/main.cpp ${IVY_SRC_FILES})
-list(FILTER IVY_SRC_FILES EXCLUDE REGEX "main.cpp")
-add_executable(iVy_tests ${IVY_SRC_FILES} ${IVY_TEST_FILES})
 
+# Defining compilation flags
+set(RELEASE_OPTIONS -O3 -s -flto=auto -march=native -mtune=native -fomit-frame-pointer -fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/=)
+set(DEBUG_OPTIONS -Wall -Wextra -Wpedantic -Wformat=2 -Wtrampolines -Werror -Woverloaded-virtual -Wno-unused-parameter -Wno-unused-variable)
+
+# Defining sources files
+file(GLOB_RECURSE IVY_SOURCES src/**.cpp src/**.glsl libraries/**.cpp libraries/**.c)
+file(GLOB_RECURSE IVY_TESTS tests/**.cpp)
+
+# Downloading libraries from github
 include(CPM.cmake)
 CPMAddPackage(
         NAME glfw
@@ -51,35 +57,24 @@ CPMAddPackage(
         GIT_TAG v1.15.2
 )
 
-# Generating glad target with gl core 4.3
-add_library(glad_gl_core_43 libraries/glad_gl_core_43/src/gl.c)
-target_include_directories(glad_gl_core_43 PUBLIC libraries/glad_gl_core_43/include)
-
-# Creating the imgui target
+# Adding the imgui dependency
 add_library(imgui STATIC ${imgui_SOURCE_DIR}/imgui.cpp ${imgui_SOURCE_DIR}/imgui_draw.cpp ${imgui_SOURCE_DIR}/imgui_tables.cpp
         ${imgui_SOURCE_DIR}/imgui_widgets.cpp ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
+target_compile_options(imgui PRIVATE $<$<CONFIG:Release>:${RELEASE_OPTIONS}> $<$<CONFIG:Debug>:${DEBUG_OPTIONS}>)
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 target_link_libraries(imgui glfw)
 
-# Enabling IPO if supported
-include(CheckIPOSupported)
-check_ipo_supported(RESULT supported OUTPUT error)
-if(supported)
-    set_property(TARGET iVy PROPERTY INTERPROCEDURAL_OPTIMIZATION <$<CONFIG:Release>:TRUE><$<CONFIG:Debug>:FALSE>)
-endif()
-
-# Optionally enabling libasan in debug builds
-#target_link_options(iVy PRIVATE $<$<CONFIG:Debug>:-fsanitize=address,undefined>)
-
-# Enabling optimization for release builds and more warnings in debugs builds
-target_compile_options(iVy PRIVATE $<$<CONFIG:Release>:-O3 -s -flto -march=native -mtune=native -fomit-frame-pointer>
-        $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -Wformat=2 -Wtrampolines -Werror -Woverloaded-virtual -Wno-unused-parameter -Wno-unused-variable>)
-
 # Building iVy
-target_link_libraries(iVy glad_gl_core_43 glfw glm FastNoise2 imgui)
+add_executable(iVy src/main.cpp ${IVY_SOURCES})
+target_compile_options(iVy PRIVATE $<$<CONFIG:Release>:${RELEASE_OPTIONS}> $<$<CONFIG:Debug>:${DEBUG_OPTIONS}>)
+target_include_directories(iVy PRIVATE libraries/glad_gl_core_43/include libraries/iVy_utils/include ${CMAKE_SOURCE_DIR})
+target_link_libraries(iVy glfw glm FastNoise imgui)
 
 # Building iVy_tests
 include(GoogleTest)
-target_include_directories(iVy_tests PRIVATE ${CMAKE_SOURCE_DIR})
-target_link_libraries(iVy_tests glad_gl_core_43 glfw glm FastNoise2 imgui gtest_main)
+list(FILTER IVY_SOURCES EXCLUDE REGEX "main.cpp")
+add_executable(iVy_tests ${IVY_SOURCES} ${IVY_TESTS})
+target_compile_options(iVy_tests PRIVATE $<$<CONFIG:Release>:${RELEASE_OPTIONS}> $<$<CONFIG:Debug>:${DEBUG_OPTIONS}>)
+target_include_directories(iVy_tests PRIVATE libraries/glad_gl_core_43/include libraries/iVy_utils/include ${CMAKE_SOURCE_DIR})
+target_link_libraries(iVy_tests PRIVATE glfw glm FastNoise imgui gtest_main)
 gtest_discover_tests(iVy_tests)

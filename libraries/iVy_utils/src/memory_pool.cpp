@@ -1,6 +1,6 @@
 #include <cstring>
 #include "memory_pool.h"
-#include "../log.h"
+#include "ivy_log.h"
 
 MemoryPoolClient::MemoryPoolClient(FastMemoryPool *src) : source(src), pools() {}
 

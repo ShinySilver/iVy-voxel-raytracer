@@ -1,10 +1,11 @@
 #include "client.h"
 #include "camera.h"
 #include "renderer.h"
-#include "world_view.h"
-#include "gui.h"
+#include "gui/debug.h"
 #include "context.h"
-#include "../common/log.h"
+#include "ivy_log.h"
+#include "gui/chat.h"
+#include "gui/pause_menu.h"
 
 static GLFWwindow *window;
 
@@ -18,21 +19,33 @@ void client::start() {
      * Initializing the client
      */
     window = context::init();
-    world_view::init();
-    renderer::init(window);
-    gui::init(window);
-    glfwShowWindow(window); // the window is initially hidden. We show it only after doing the lengthy initialisation.
+    renderer::init();
+    glfwShowWindow(window);
     info("Client started")
 
     /**
-     * Very basic keybindings:
-     *  - Closing when pressing escape
-     *  - Mouse capturing / releasing on left click / left alt
+     * Very basic keybindings
      */
-    context::register_key_callback(GLFW_KEY_ESCAPE, [](int) { glfwSetWindowShouldClose(window, true); });
-    context::register_key_callback(GLFW_KEY_F11, [](int action) { if (action == GLFW_PRESS) context::toggle_fullscreen(); });
-    context::register_key_callback(GLFW_KEY_LEFT_ALT, [](int) { glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); });
-    context::register_mouse_callback(GLFW_MOUSE_BUTTON_LEFT, [](int) { glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); });
+    context::register_key_callback(GLFW_KEY_ESCAPE, [](int action) {
+        if (action == GLFW_PRESS) {
+            if (!gui::chat::is_enabled) {
+                gui::pause_menu::is_enabled = !gui::pause_menu::is_enabled;
+                context::set_cursor_enabled(gui::pause_menu::is_enabled);
+            } else {
+                gui::chat::is_enabled = false;
+                context::set_cursor_enabled(false);
+            }
+        }
+    }, 1);
+    context::register_key_callback(GLFW_KEY_ENTER, [](int action) {
+        if (action == GLFW_PRESS && !gui::chat::is_enabled) {
+            gui::chat::is_enabled = true;
+            context::set_cursor_enabled(true);
+        }
+    }, 1);
+    context::register_key_callback(GLFW_KEY_F11, [](int action) { if (action == GLFW_PRESS) context::set_fullscreen(!context::is_fullscreen()); });
+    context::register_key_callback(GLFW_KEY_F3, [](int action) { if (action == GLFW_PRESS) gui::debug::is_enabled = !gui::debug::is_enabled; });
+    context::register_mouse_callback(GLFW_MOUSE_BUTTON_LEFT, [](int) { if (!gui::chat::is_enabled && !gui::pause_menu::is_enabled) context::set_cursor_enabled(false); });
 
     /**
      * Rendering loop!
@@ -44,17 +57,13 @@ void client::start() {
         // Skipping frames when the window is hidden
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) continue;
 
-        // Rendering! First the main renderer, then the UI
-        camera::update(window);
-        world_view::update();
-        renderer::render();
-        gui::render();
+        camera::update(window); // Updating the camera location
+        renderer::render(); // Then doing the primary render
+
         glfwSwapBuffers(window);
     }
 
-    gui::terminate();
     renderer::terminate();
-    world_view::terminate();
     context::terminate();
     info("Client stopped")
 }
