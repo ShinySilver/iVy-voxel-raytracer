@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../common/world.h"
+#include "server/generators/generator.h"
 
 namespace server {
+    extern Generator *world_generator;
     void start();
     void stop();
     void join();

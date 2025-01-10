@@ -1,8 +1,8 @@
 #include <cfloat>
 #include <cmath>
+#include <sys/param.h>
 #include "procedural_generator.h"
 #include "FastNoise/FastNoise.h"
-#include "../../common/materials.h"
 
 static Voxel get_voxel(float *heightmap, int x, int y, int z);
 static Chunk *generate_chunk(float *heightmap, int x, int y, int z);
@@ -10,7 +10,7 @@ static Chunk *generate_chunk(float *heightmap, int x, int y, int z);
 server::ProceduralGenerator::ProceduralGenerator() = default;
 server::ProceduralGenerator::~ProceduralGenerator() = default;
 
-Region *server::ProceduralGenerator::generate_region(int rx, int ry, int rz) {
+void server::ProceduralGenerator::generate_view(int rx, int ry, int rz, WorldView& view) {
 
     // Heightmap parameters
     const int height_offset = 64;
@@ -45,7 +45,6 @@ Region *server::ProceduralGenerator::generate_region(int rx, int ry, int rz) {
     }
 
     // Using the heightmap to generate
-    Region *region = new Region();
     for (int y = ry; y < ry + IVY_REGION_WIDTH; y += IVY_NODE_WIDTH) {
         for (int x = rx; x < rx + IVY_REGION_WIDTH; x += IVY_NODE_WIDTH) {
             int min = chunk_min[x + y * IVY_REGION_WIDTH / IVY_NODE_WIDTH];
@@ -53,22 +52,17 @@ Region *server::ProceduralGenerator::generate_region(int rx, int ry, int rz) {
             if (max < rz || min > rz + IVY_REGION_WIDTH) continue;
             for (int z = MAX(rz, min); z <= MIN(max, rz + IVY_REGION_WIDTH); z += IVY_NODE_WIDTH) {
                 Chunk *chunk = generate_chunk(height_map, x, y, z);
-                if (chunk != nullptr) region->add_leaf_node(x - rx, y - ry, z - rz, chunk);
+                if (chunk != nullptr) view.add_chunk(x - rx, y - ry, z - rz, chunk);
             }
         }
     }
     free(height_map);
-    return region;
-}
-
-HeightMap *server::ProceduralGenerator::generate_heightmap(int x, int y, int z, int width) {
-    return nullptr;
 }
 
 static Voxel get_voxel(float *heightmap, int x, int y, int z) {
-    if (x < 0 || x >= IVY_REGION_WIDTH || y < 0 || y >= IVY_REGION_WIDTH || z < 0 || z >= IVY_REGION_WIDTH) return STONE;
+    if (x < 0 || x >= IVY_REGION_WIDTH || y < 0 || y >= IVY_REGION_WIDTH || z < 0 || z >= IVY_REGION_WIDTH) return Voxel{STONE};
     float h = heightmap[x + y * IVY_REGION_WIDTH];
-    return (z <= h) ? STONE : AIR;
+    return (z <= h) ? Voxel{STONE} : Voxel{AIR};
 }
 
 static Chunk *generate_chunk(float *heightmap, int x, int y, int z) {
@@ -78,17 +72,17 @@ static Chunk *generate_chunk(float *heightmap, int x, int y, int z) {
         for (int dy = 0; dy < IVY_NODE_WIDTH; dy += 1) {
             for (int dx = 0; dx < IVY_NODE_WIDTH; dx += 1) {
                 Voxel v = get_voxel(heightmap, x + dx, y + dy, z + dz);
-                if (v != AIR) {
-                    bool is_surface = get_voxel(heightmap, x + dx + 1, y + dy, z + dz) == AIR ||
-                                      get_voxel(heightmap, x + dx - 1, y + dy, z + dz) == AIR ||
-                                      get_voxel(heightmap, x + dx, y + dy + 1, z + dz) == AIR ||
-                                      get_voxel(heightmap, x + dx, y + dy - 1, z + dz) == AIR ||
-                                      get_voxel(heightmap, x + dx, y + dy, z + dz + 1) == AIR ||
-                                      get_voxel(heightmap, x + dx, y + dy, z + dz - 1) == AIR;
-                    v = is_surface ? v : AIR;
+                if (v.material != AIR) {
+                    bool is_surface = get_voxel(heightmap, x + dx + 1, y + dy, z + dz).material == AIR ||
+                                      get_voxel(heightmap, x + dx - 1, y + dy, z + dz).material == AIR ||
+                                      get_voxel(heightmap, x + dx, y + dy + 1, z + dz).material == AIR ||
+                                      get_voxel(heightmap, x + dx, y + dy - 1, z + dz).material == AIR ||
+                                      get_voxel(heightmap, x + dx, y + dy, z + dz + 1).material == AIR ||
+                                      get_voxel(heightmap, x + dx, y + dy, z + dz - 1).material == AIR;
+                    v = is_surface ? v : Voxel{AIR};
                 }
                 chunk.set(dx, dy, dz, v);
-                if (v != AIR) voxel_count += 1;
+                if (v.material != AIR) voxel_count += 1;
             }
         }
     }

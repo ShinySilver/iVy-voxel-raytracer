@@ -1,10 +1,11 @@
 #include "debug.h"
 
 #include "imgui.h"
-#include "../../common/world.h"
-#include "../context.h"
-#include "../camera.h"
-#include "chat.h"
+#include "client/context.h"
+#include "client/camera.h"
+#include "client/gui/chat.h"
+#include "client/client.h"
+#include "server/server.h"
 
 bool client::gui::debug::is_enabled = false;
 
@@ -23,7 +24,7 @@ void client::gui::debug::render() {
         ImGui::Text("Window resolution: %dx%d (%s)", int(viewport->Size.x), int(viewport->Size.y), context::is_fullscreen() ? "Fullscreen" : "Windowed");
         ImGui::Text("Memory-pool allocation: %.2lf MiB", (double) memory_pool.allocated() / 1024.0 / 1024.0);
         ImGui::Text("Memory-pool usage: %.2lf MiB", (double) memory_pool.used() / 1024.0 / 1024.0);
-        ImGui::Text("Worldgen: %s", world_generator->get_name());
+        ImGui::Text("Worldgen: %s", server::world_generator->get_name());
         ImGui::Text("Chat: %s", chat::is_enabled ? "Opened" : "Closed");
         ImGui::Text("Framerate: %.1f FPS (%.2f ms/frame)", io.Framerate, 1000.0f / io.Framerate);
     }

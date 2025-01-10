@@ -1,23 +1,25 @@
-#include "server.h"
-#include "generators/debug_generator.h"
-#include "generators/procedural_generator.h"
 #include "ivy_log.h"
+#include "server/server.h"
+#include "server/generators/procedural_generator.h"
 
-// TODO: Everything :)
-
-void server::start() {
-    if (world_generator == nullptr) {
-        //world_generator = new DebugGenerator();
-        world_generator = new ProceduralGenerator();
+namespace server {
+    namespace {
+        // TODO: Everything :)
     }
-    info("Server started");
-}
 
-void server::stop() {
-    delete world_generator;
-    info("Server stopped");
-}
+    Generator *world_generator;
 
-void server::join() {
+    void start() {
+        if (world_generator == nullptr) world_generator = new ProceduralGenerator();
+        info("Server started");
+    }
 
+    void stop() {
+        delete world_generator;
+        info("Server stopped");
+    }
+
+    void join() {
+
+    }
 }

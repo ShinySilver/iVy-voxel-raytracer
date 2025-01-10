@@ -44,7 +44,7 @@ public:
      * @param max_size Maximum size of the memory pool.
      * @param chunk_size Size of each chunk to allocate.
      */
-    FastMemoryPool(size_t max_size = 2ULL * 1024 * 1024 * 1024, size_t chunk_size = 12 * 1024);
+    explicit FastMemoryPool(size_t max_size = 2ULL * 1024 * 1024 * 1024, size_t chunk_size = 12 * 1024);
 
     /**
      * Destructor for FastMemoryPool. Frees all allocated clients and the main memory block.
@@ -55,7 +55,7 @@ public:
      * Create a new MemoryPoolClient associated with this pool.
      * @return A pointer to the newly created MemoryPoolClient.
      */
-    MemoryPoolClient *create_client();
+    MemoryPoolClient &create_client();
 
     /**
      * Free a MemoryPoolClient, deallocating its memory.

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../../common/world.h"
+#include "generator.h"
+#include "common/heightmap.h"
 
 namespace server {
     class ProceduralGenerator : public Generator {
@@ -10,7 +11,6 @@ namespace server {
         ProceduralGenerator();
         ~ProceduralGenerator() override;
         const char *get_name() override { return "Procedural"; };
-        Region *generate_region(int x, int y, int z) override;
-        HeightMap *generate_heightmap(int x, int y, int z, int width) override;
+        void generate_view(int rx, int ry, int rz, WorldView& view) override;
     };
 }

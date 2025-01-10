@@ -1,32 +1,25 @@
-#include <cmath>
-#include "chat.h"
 #include "imgui.h"
-#include "../context.h"
 #include "ivy_time.h"
-#include "ivy_log.h"
+#include "client/context.h"
+#include "client/gui/chat.h"
 
 namespace client::gui::chat {
     namespace {
 
-        // A message contains some text, the sender, and timestamp that is shown when hovered & used to show transient messages even when chat is closed
-        struct Message {
-            char text[256] = {'\0'};
-            uint64_t timestamp_us = 0u;
-            char owner_name[32] = "Player";
-        };
+        // A few const used in the gui
+        const float padding = 10.0f, input_height = 30.0f;
+        const int recent_duration_seconds = 10;
 
         // A fixed-sized buffer for the chat input field
         char input_buffer[256] = {'\0'};
 
         // A cyclic buffer for the chat history
-        Message chat_history[64] = {};
+        struct Message {
+            char text[256] = {'\0'};
+            uint64_t timestamp_us = 0u;
+            char owner_name[32] = "Player";
+        } chat_history[64] = {};
         int chat_history_current = -1, chat_history_length = 0;
-
-        // A few const used in the layout
-        const float padding = 10.0f, input_height = 30.0f;
-
-        // Another const, defining the duration (in seconds) for a message to be considered recent
-        const int recent_duration_seconds = 10;
 
         void render_all() {
             // Layout

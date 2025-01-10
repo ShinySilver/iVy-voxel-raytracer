@@ -1,6 +1,6 @@
 #include <cstring>
-#include "memory_pool.h"
 #include "ivy_log.h"
+#include "client/utils/memory_pool.h"
 
 MemoryPoolClient::MemoryPoolClient(FastMemoryPool *src) : source(src), pools() {}
 
@@ -120,10 +120,10 @@ void FastMemoryPool::deallocate(void *ptr) {
     free_blocks.push_back(ptr);
 }
 
-MemoryPoolClient *FastMemoryPool::create_client() {
-    MemoryPoolClient *client = new MemoryPoolClient(this);
+MemoryPoolClient &FastMemoryPool::create_client() {
+    auto *client = new MemoryPoolClient(this);
     clients.push_back(client);
-    return client;
+    return *client;
 }
 
 void FastMemoryPool::free_client(MemoryPoolClient *client) {
@@ -144,7 +144,7 @@ size_t FastMemoryPool::allocated() {
 
 size_t FastMemoryPool::used() {
     size_t used_memory = 0;
-    for (const auto & client: clients) {
+    for (const auto &client: clients) {
         used_memory += client->get_used_memory();
     }
     return used_memory;

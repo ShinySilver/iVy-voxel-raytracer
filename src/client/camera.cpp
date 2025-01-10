@@ -1,8 +1,8 @@
 #include <chrono>
-#include "camera.h"
 #include "glm/gtc/matrix_transform.hpp"
-#include "../common/world.h"
-#include "gui/chat.h"
+#include "client/camera.h"
+#include "client/gui/chat.h"
+#include "server/generators/generator.h"
 
 namespace client::camera {
     glm::vec3 position{IVY_REGION_WIDTH/4, 128, IVY_REGION_WIDTH/4}, direction{0.6f, -0.66f, 0.6f};

@@ -1,8 +1,8 @@
-#include "context.h"
 #include "ivy_log.h"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_glfw.h"
+#include "client/context.h"
 
 #define CLIENT_WIN_WIDTH 900
 #define CLIENT_WIN_HEIGHT 600
@@ -175,10 +175,6 @@ bool client::context::is_cursor_enabled() {
 
 void client::context::get_window_size(int *width, int *height) {
     glfwGetWindowSize(window, width, height);
-}
-
-void client::context::close_window() {
-    glfwSetWindowShouldClose(window, true);
 }
 
 static void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mods) {
