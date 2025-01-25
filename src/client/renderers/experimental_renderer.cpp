@@ -9,14 +9,14 @@
 #include "client/camera.h"
 #include "client/gui/debug.h"
 #include "client/gui/chat.h"
-#include "client/renderers/wide_tree_renderer.h"
+#include "client/renderers/experimental_renderer.h"
 #include "client/shaders/main_pass.glsl"
 #include "server/server.h"
 #include "server/generators/generator.h"
 
 namespace client::renderers {
 
-    WideTreeRenderer::WideTreeRenderer() : Renderer("64-tree") {
+    ExperimentalRenderer::ExperimentalRenderer() : Renderer("64-tree") {
         // Initializing the renderer shader, SSBO and framebuffer
         char templated_shader_code[sizeof(main_pass_glsl)];
         snprintf(templated_shader_code, sizeof(main_pass_glsl), main_pass_glsl, 0);
@@ -34,13 +34,13 @@ namespace client::renderers {
         glNamedBufferData(memory_pool_SSBO, (long) memory_pool.size(), memory_pool.to_pointer(0), GL_STATIC_COPY);
     }
 
-    WideTreeRenderer::~WideTreeRenderer() {
+    ExperimentalRenderer::~ExperimentalRenderer() {
         glDeleteProgram(main_pass_shader);
         glDeleteFramebuffers(1, &framebuffer);
         glDeleteBuffers(1, &memory_pool_SSBO);
     }
 
-    void WideTreeRenderer::render() {
+    void ExperimentalRenderer::render() {
         // Then, doing the rendering of the world view
         glUseProgram(main_pass_shader);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, memory_pool_SSBO);
@@ -68,7 +68,7 @@ namespace client::renderers {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
 
-    void WideTreeRenderer::resize(int resolution_x, int resolution_y) {
+    void ExperimentalRenderer::resize(int resolution_x, int resolution_y) {
         if (framebuffer_texture) destroy_texture(framebuffer_texture);
         glViewport(0, 0, resolution_x, resolution_y);
         framebuffer_resolution_x = std::max(1, resolution_x);

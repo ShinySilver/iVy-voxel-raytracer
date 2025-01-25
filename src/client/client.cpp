@@ -5,15 +5,19 @@
 #include "client/gui/debug.h"
 #include "client/gui/chat.h"
 #include "client/renderers/renderer.h"
-#include "client/renderers/wide_tree_renderer.h"
+#include "client/renderers/experimental_renderer.h"
 
 namespace client {
-    namespace {
-        GLFWwindow *window;
-    }
 
     Renderer *active_renderer;
     FastMemoryPool memory_pool = FastMemoryPool();
+
+    namespace {
+        GLFWwindow *window;
+        void resize_view(int resolution_x, int resolution_y){
+            if(active_renderer) active_renderer->resize(resolution_x, resolution_y);
+        }
+    }
 
     void start() {
         /**
@@ -25,7 +29,8 @@ namespace client {
          * Initializing the client
          */
         window = context::init();
-        active_renderer = new renderers::WideTreeRenderer();
+        active_renderer = new renderers::ExperimentalRenderer();
+        context::register_framebuffer_callback(resize_view);
         glfwShowWindow(window);
         info("Client started")
 
@@ -34,6 +39,7 @@ namespace client {
          */
         context::register_key_callback(GLFW_KEY_F11, [](int action) { if (action == GLFW_PRESS) context::set_fullscreen(!context::is_fullscreen()); });
         context::register_key_callback(GLFW_KEY_F3, [](int action) { if (action == GLFW_PRESS) gui::debug::is_enabled = !gui::debug::is_enabled; });
+        context::register_key_callback(GLFW_KEY_F2, [](int action) { if (action == GLFW_PRESS) context::set_vsync_enabled(!context::is_vsync_enabled()); });
         context::register_mouse_callback(GLFW_MOUSE_BUTTON_LEFT, [](int) { if (!gui::chat::is_enabled) context::set_cursor_enabled(false); });
 
         /**

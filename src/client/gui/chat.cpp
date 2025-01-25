@@ -73,6 +73,7 @@ namespace client::gui::chat {
                 is_enabled = false;
                 context::set_cursor_enabled(false);
             }
+            ImGui::PopStyleColor(2);
             ImGui::End();
         }
 

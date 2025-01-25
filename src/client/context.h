@@ -23,4 +23,5 @@ namespace client::context {
     bool is_cursor_enabled();
 
     void get_window_size(int *width, int *height);
+    void get_framebuffer_size(int *width, int *height);
 }

@@ -44,7 +44,7 @@ GLFWwindow *client::context::init() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     /**
@@ -175,6 +175,10 @@ bool client::context::is_cursor_enabled() {
 
 void client::context::get_window_size(int *width, int *height) {
     glfwGetWindowSize(window, width, height);
+}
+
+void client::context::get_framebuffer_size(int *width, int *height) {
+    glfwGetFramebufferSize(window, width, height);
 }
 
 static void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mods) {

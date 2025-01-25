@@ -5,10 +5,10 @@
 #include "client/utils/wide_tree.h"
 
 namespace client::renderers {
-    class WideTreeRenderer final: public Renderer {
+    class ExperimentalRenderer final: public Renderer {
     public:
-        WideTreeRenderer();
-        ~WideTreeRenderer() override;
+        ExperimentalRenderer();
+        ~ExperimentalRenderer() override;
         void render() override;
         void resize(int resolution_x, int resolution_y) override;
     private:
