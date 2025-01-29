@@ -1,29 +1,19 @@
-const char main_pass_glsl[] = R""(
+const char depth_prepass_glsl[] = R""(
 #version 460 core
-#extension GL_ARB_shader_clock : enable
 
 #define SIZEOF_NODE 12
 #define NODE_WIDTH 4
 #define NODE_WIDTH_SQRT 2
 #define MINI_STEP_SIZE 5e-3f
 
-#define OUTPUT_TYPE %d // 0: color, 1: time, 2: dda_steps, 3: tree_steps
-#define OUTPUT_DDA_STEPS_COLOR_SATURATION 64.0f
-#define OUTPUT_TREE_STEPS_COLOR_SATURATION 32.0f
-#define OUTPUT_TIME_COLOR_SATURATION 100000.0f
-
 layout (local_size_x = 8, local_size_y = 8) in;
-layout (rgba8, binding = 0) uniform restrict writeonly image2D outImage;
+layout (r16f, binding = 0) uniform restrict writeonly image2D lowres_depth_texture;
 
 uniform uvec2 screen_size;
 uniform vec3 camera_position;
 uniform mat4 view_matrix;
 uniform mat4 projection_matrix;
 uniform uint tree_depth;
-
-uniform int tree_step_limit;
-uniform int dda_step_limit;
-uniform vec3 sun_direction;
 
 struct Node{
     uint bitmask_low;
@@ -95,13 +85,6 @@ void main() {
         ray_pos += ray_dir * intersect + step_mask * ray_sign * MINI_STEP_SIZE;
     }
 
-    // setting up a few variables that are used for alternative output modes
-    #if OUTPUT_TYPE == 1
-    uvec2 start = clock2x32ARB();
-    #endif
-    int dda_steps = 0;
-    int tree_steps = 0;
-
     // if the ray intersect the world volume, raytrace
     if (intersect >= 0) {
 
@@ -135,10 +118,6 @@ void main() {
                 // update lbb
                 lbmin = uvec3(lbmin) & uvec3(~(node_width * NODE_WIDTH - 1u));
                 lbmax = lbmin + uvec3(node_width*NODE_WIDTH);
-
-                // keeping track of the number of tree steps for reference
-                tree_steps += 1;
-                if(tree_steps == tree_step_limit){imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[1], 1.00)); return;}
             }
 
             // check hit
@@ -156,28 +135,8 @@ void main() {
                     // if there is a hit on a voxel in a terminal node: return hit color
                     bool is_terminal = (current_node.header & (0x1u << 30)) != 0;
                     if(is_terminal){
-
-                        // Extracting the base surface color from the tree
-                        uint color_index = 0;
-                        bool is_lod = (current_node.header & (0x1u << 31)) != 0;
-                        if(is_lod){
-                            color_index = current_node.header & ~(0x3u << 30);
-                        }else{
-                            // Not implemented. We return DEBUG_RED
-                        }
-
-                        // Calculating the final surface color && applying it :)
-                        #if OUTPUT_TYPE == 0
-                        vec3 color = colors[color_index-1]*dot(step_mask*vec3(0.9, 0.7, 0.4), vec3(1));
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1));
-                        #elif OUTPUT_TYPE == 1
-                        uvec2 end = clock2x32ARB();
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4((end.x-start.x)/OUTPUT_TIME_COLOR_SATURATION, 0, 0, 1));
-                        #elif OUTPUT_TYPE == 2
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/OUTPUT_DDA_STEPS_COLOR_SATURATION, 0, 0, 1));
-                        #elif OUTPUT_TYPE == 3
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/OUTPUT_TREE_STEPS_COLOR_SATURATION, 0, 0, 1));
-                        #endif
+                        float depth = length(ray_pos - camera_position);
+                        imageStore(lowres_depth_texture, ivec2(gl_GlobalInvocationID.xy), vec4(depth, 0, 0, 1));
                         return;
                     }
 
@@ -209,10 +168,6 @@ void main() {
                     } else {
                         has_collided = ((current_node.bitmask_high & (0x1u << (bitmask_index - 32))) != 0);
                     }
-
-                    // keeping track of the number of tree steps for reference
-                    tree_steps += 1;
-                    if(tree_steps == tree_step_limit){imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[has_collided?1:2], 1.00)); return;}
                 } while(has_collided);
 
                 // update lbb
@@ -228,23 +183,10 @@ void main() {
             // mini-step + normal extraction
             step_mask = vec3(equal(vec3(ray_step), side_dist));
             ray_pos += MINI_STEP_SIZE * ray_sign * step_mask;
-
-            // keeping track of the number of DDA step for reference
-            dda_steps+=1;
-            if(dda_steps == dda_step_limit){imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(colors[0], 1.00)); return;}
         } while(all(greaterThanEqual(ray_pos, bmin)) && all(lessThan(ray_pos, bmax))); // while in global-bound
     }
 
     // applying the sky color to the framebuffer
-    #if OUTPUT_TYPE == 0
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.69, 0.88, 0.90, 1.00));
-    #elif OUTPUT_TYPE == 1
-    uvec2 end = clock2x32ARB();
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(vec3(end.x-start.x, 0, 0) / OUTPUT_TIME_COLOR_SATURATION, 1));
-    #elif OUTPUT_TYPE == 2
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(dda_steps/OUTPUT_DDA_STEPS_COLOR_SATURATION, 0, 0, 1));
-    #elif OUTPUT_TYPE == 3
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(tree_steps/OUTPUT_TREE_STEPS_COLOR_SATURATION, 0, 0, 1));
-    #endif
+    imageStore(lowres_depth_texture, ivec2(gl_GlobalInvocationID.xy), vec4(0, 0, 0, 1)); // Default depth if no hit
 }
 )"";
