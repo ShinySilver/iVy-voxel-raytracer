@@ -37,6 +37,12 @@ namespace client {
         info("Client started")
 
         /**
+         * Forcing a camera pos for benchmarking
+         */
+        camera::position = {450, 450, 450};
+        camera::direction = {0.5, -0.75, 0.5};
+
+        /**
          * Very basic keybindings
          */
         context::register_key_callback(GLFW_KEY_F11, [](int action) { if (action == GLFW_PRESS) context::set_fullscreen(!context::is_fullscreen()); });

@@ -41,10 +41,10 @@ private:
 public:
     /**
      * Constructor for FastMemoryPool.
-     * @param max_size Maximum size of the memory pool.
-     * @param chunk_size Size of each chunk to allocate.
+     * @param max_size Maximum size of the memory pool. Defaults to 1 GB.
+     * @param chunk_size Size of each chunk to allocate. Defaults to 12 KB.
      */
-    explicit FastMemoryPool(size_t max_size = 2ULL * 1024 * 1024 * 1024, size_t chunk_size = 12 * 1024);
+    explicit FastMemoryPool(size_t max_size = 1ULL * 1024 * 1024 * 1024, size_t chunk_size = 12 * 1024);
 
     /**
      * Destructor for FastMemoryPool. Frees all allocated clients and the main memory block.

@@ -86,7 +86,7 @@ void main() {
     if (intersect >= 0) {
         // Use depth texture to skip empty space
         float starting_depth = imageLoad(fullres_depth_texture, ivec2(gl_GlobalInvocationID.xy)).r;
-        vec3 depth_point = vec3(camera_position + ray_dir * starting_depth);
+        vec3 depth_point = vec3(camera_position + ray_dir * (starting_depth-1));
         ray_pos = depth_point + ray_dir * MINI_STEP_SIZE;
 
         // setting up the stack
