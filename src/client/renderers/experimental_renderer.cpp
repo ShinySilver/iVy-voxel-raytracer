@@ -14,8 +14,10 @@
 #include "client/shaders/experimental/minpool_horizontal.glsl"
 #include "client/shaders/experimental/minpool_vertical.glsl"
 #include "client/shaders/experimental/depth_prepass.glsl"
+#include "client/shaders/experimental/postprocess_normals.glsl"
 #include "server/server.h"
 #include "server/generators/generator.h"
+#include "glm/gtc/type_ptr.hpp"
 
 namespace client::renderers {
 
@@ -25,6 +27,7 @@ namespace client::renderers {
         depth_prepass_shader = client::util::build_program(depth_prepass_glsl, GL_COMPUTE_SHADER);
         minpool_horizontal_shader = client::util::build_program(minpool_horizontal_glsl, GL_COMPUTE_SHADER);
         minpool_vertical_shader = client::util::build_program(minpool_vertical_glsl, GL_COMPUTE_SHADER);
+        postprocess_normals_shader = client::util::build_program(postprocess_normals_glsl, GL_COMPUTE_SHADER);
         glCreateBuffers(1, &memory_pool_SSBO);
         glCreateFramebuffers(1, &framebuffer);
         context::get_framebuffer_size(&framebuffer_resolution_x, &framebuffer_resolution_y);
@@ -43,10 +46,12 @@ namespace client::renderers {
         if (depth_texture) destroy_texture(depth_texture);
         if (intermediate_depth_texture) destroy_texture(intermediate_depth_texture);
         if (lowres_depth_texture) destroy_texture(lowres_depth_texture);
+        if (voxel_and_normal_texture) destroy_texture(voxel_and_normal_texture);
         glDeleteProgram(main_pass_shader);
         glDeleteProgram(depth_prepass_shader);
         glDeleteProgram(minpool_horizontal_shader);
         glDeleteProgram(minpool_vertical_shader);
+        glDeleteProgram(postprocess_normals_shader);
         glDeleteFramebuffers(1, &framebuffer);
         glDeleteBuffers(1, &memory_pool_SSBO);
     }
@@ -82,7 +87,8 @@ namespace client::renderers {
         glUseProgram(main_pass_shader);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, memory_pool_SSBO);
         bind_texture(depth_texture, 0, GL_R16F, GL_READ_ONLY);
-        bind_texture(framebuffer_texture, 1, GL_RGBA8, GL_WRITE_ONLY);
+        bind_texture(voxel_and_normal_texture, 1, GL_RGBA8, GL_WRITE_ONLY);
+        bind_texture(intermediate_depth_texture, 2, GL_R16F, GL_WRITE_ONLY);
         glUniform2ui(glGetUniformLocation(main_pass_shader, "screen_size"), (uint32_t) framebuffer_resolution_x, (uint32_t) framebuffer_resolution_y);
         glUniform3f(glGetUniformLocation(main_pass_shader, "camera_position"), client::camera::position.x, client::camera::position.y, client::camera::position.z);
         glUniformMatrix4fv(glGetUniformLocation(main_pass_shader, "view_matrix"), 1, GL_FALSE, &camera::view_matrix[0][0]);
@@ -91,9 +97,16 @@ namespace client::renderers {
         glDispatchCompute(GLuint(ceilf(float(framebuffer_resolution_x) / 8.0f)), GLuint(ceilf(float(framebuffer_resolution_y) / 8.0f)), 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-        // Normal pooling. Takes normal and depth, and modify them in order to "smooth" faraway voxel normals and reduce Moiré patterns
-        // glUseProgram(normalpool_shader);
-        // glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+        // Postprocess normals. Takes normal and depth, and modify them in order to "smooth" faraway voxel normals and reduce Moiré patterns
+        glUseProgram(postprocess_normals_shader);
+        bind_texture(intermediate_depth_texture, 0, GL_R16F, GL_READ_ONLY);
+        bind_texture(voxel_and_normal_texture, 1, GL_RGBA8, GL_READ_ONLY);
+        bind_texture(framebuffer_texture, 2, GL_RGBA8, GL_WRITE_ONLY);
+        glUniform3f(glGetUniformLocation(postprocess_normals_shader, "camera_position"), client::camera::position.x, client::camera::position.y, client::camera::position.z);
+        glUniformMatrix4fv(glGetUniformLocation(postprocess_normals_shader, "view_matrix"), 1, GL_FALSE, &camera::view_matrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(postprocess_normals_shader, "projection_matrix"), 1, GL_FALSE, &projection_matrix[0][0]);
+        glDispatchCompute(GLuint(ceilf(float(framebuffer_resolution_x) / 8.0f)), GLuint(ceilf(float(framebuffer_resolution_y) / 8.0f)), 1);
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
         // Secondary ray. Takes both the voxel ids texture and normal&depth texture, and write to the color texture
         // glUseProgram(normalpool_shader);
@@ -118,11 +131,13 @@ namespace client::renderers {
         if (depth_texture) destroy_texture(depth_texture);
         if (intermediate_depth_texture) destroy_texture(intermediate_depth_texture);
         if (lowres_depth_texture) destroy_texture(lowres_depth_texture);
+        if (voxel_and_normal_texture) destroy_texture(voxel_and_normal_texture);
         glViewport(0, 0, resolution_x, resolution_y);
         framebuffer_resolution_x = std::max(1, resolution_x);
         framebuffer_resolution_y = std::max(1, resolution_y);
         projection_matrix = glm::perspective(glm::radians(80.0f), (float) framebuffer_resolution_x / float(framebuffer_resolution_y), 0.1f, 100.0f);
         framebuffer_texture = client::util::create_texture(framebuffer_resolution_x, framebuffer_resolution_y, GL_RGBA8, GL_NONE);
+        voxel_and_normal_texture = client::util::create_texture(framebuffer_resolution_x, framebuffer_resolution_y, GL_RGBA8, GL_NONE);
         depth_texture = client::util::create_texture(framebuffer_resolution_x, framebuffer_resolution_y, GL_R16F, GL_NONE);
         intermediate_depth_texture = client::util::create_texture(framebuffer_resolution_x, framebuffer_resolution_y, GL_R16F, GL_NONE);
         lowres_depth_texture = client::util::create_texture(uint32_t(ceil(framebuffer_resolution_x / 2.)), uint32_t(ceil(framebuffer_resolution_y / 2.)), GL_R16F, GL_NONE);

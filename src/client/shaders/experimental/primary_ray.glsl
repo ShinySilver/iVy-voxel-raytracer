@@ -8,8 +8,9 @@ const char primary_ray_glsl[] = R""(
 #define MINI_STEP_SIZE 5e-3f
 
 layout (local_size_x = 8, local_size_y = 8) in;
-layout (r16f, binding = 0) uniform restrict readonly image2D fullres_depth_texture;
-layout (rgba8, binding = 1) uniform restrict writeonly image2D outImage;
+layout (r16f, binding = 0) uniform restrict readonly image2D upscaled_fullres_depth_texture;
+layout (rgba8, binding = 1) uniform restrict writeonly image2D voxel_and_normal_texture;
+layout (r16f, binding = 2) uniform restrict writeonly image2D fullres_depth_texture;
 
 uniform uvec2 screen_size;
 uniform vec3 camera_position;
@@ -25,16 +26,6 @@ struct Node{
 
 layout (std430, binding = 0) restrict readonly buffer _node_pool{
     Node node_pool[];
-};
-
-// voxel palette. it mirrors materials.h
-vec3 colors[] = {
-    vec3(1.00, 0.40, 0.40), // DEBUG_RED
-    vec3(0.40, 1.00, 0.40), // DEBUG_GREEN
-    vec3(0.40, 0.40, 1.00), // DEBUG_BLUE
-    vec3(0.55, 0.55, 0.55), // STONE
-    vec3(0.42, 0.32, 0.25), // DIRT
-    vec3(0.30, 0.59, 0.31)  // GRASS
 };
 
 vec3 getRayDir(ivec2 screen_position) {
@@ -85,7 +76,7 @@ void main() {
     // if the ray intersect the world volume, raytrace
     if (intersect >= 0) {
         // Use depth texture to skip empty space
-        float starting_depth = imageLoad(fullres_depth_texture, ivec2(gl_GlobalInvocationID.xy)).r;
+        float starting_depth = imageLoad(upscaled_fullres_depth_texture, ivec2(gl_GlobalInvocationID.xy)).r;
         vec3 depth_point = vec3(camera_position + ray_dir * (starting_depth-1));
         ray_pos = depth_point + ray_dir * MINI_STEP_SIZE;
 
@@ -148,8 +139,8 @@ void main() {
                         }
 
                         // Calculating the final surface color && applying it :)
-                        vec3 color = colors[color_index-1]*dot(step_mask*vec3(0.9, 0.7, 0.4), vec3(1));
-                        imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1));
+                        imageStore(voxel_and_normal_texture, ivec2(gl_GlobalInvocationID.xy), vec4(color_index/10., step_mask));
+                        imageStore(fullres_depth_texture, ivec2(gl_GlobalInvocationID.xy), vec4(length(ray_pos - camera_position), 0, 0, 0));
                         return;
                     }
 
@@ -200,6 +191,7 @@ void main() {
     }
 
     // applying the sky color to the framebuffer
-    imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(0.69, 0.88, 0.90, 1.00));
+    imageStore(voxel_and_normal_texture, ivec2(gl_GlobalInvocationID.xy), vec4(0));
+    imageStore(fullres_depth_texture, ivec2(gl_GlobalInvocationID.xy), vec4(0));
 }
 )"";

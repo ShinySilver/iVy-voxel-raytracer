@@ -34,7 +34,7 @@ vec3 colors[] = {
     vec3(0.42, 0.32, 0.25), // DIRT
     vec3(0.30, 0.59, 0.31)  // GRASS
 };
-        
+
 vec3 getRayDir(ivec2 screen_position) {
     vec2 screen_space = (screen_position + vec2(0.5)) / vec2(screen_size);
     screen_space.y = 1.0 - screen_space.y;

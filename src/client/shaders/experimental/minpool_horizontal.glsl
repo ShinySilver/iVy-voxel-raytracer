@@ -8,12 +8,12 @@ layout (r16f, binding = 1) uniform restrict writeonly image2D intermediate_textu
 void main() {
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     ivec2 lowres_coord = gid / 2; // Map fullres pixel to lowres texture
-    float depth = imageLoad(lowres_depth_texture, lowres_coord).r;
     if(gid.x%2!=0 && gid.y%2==0){
         float depth_left = imageLoad(lowres_depth_texture, lowres_coord - ivec2(0, 1)).r;
         float depth_right = imageLoad(lowres_depth_texture, lowres_coord + ivec2(0, 1)).r;
-        depth = min(depth, min(depth_left, depth_right));
+        imageStore(intermediate_texture, gid, vec4(min(depth_left, depth_right), 0.0, 0.0, 0.0));
+    }else{
+        imageStore(intermediate_texture, gid, imageLoad(lowres_depth_texture, lowres_coord).rgba);
     }
-    imageStore(intermediate_texture, gid, vec4(depth, 0.0, 0.0, 0.0));
 }
 )"";

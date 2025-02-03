@@ -43,7 +43,8 @@ namespace client::util {
      * @return The id of the newly compiled shader.
      * @see destroy_program(programId)
      */
-    uint32_t build_program(const char *shaderCode, GLenum shaderType);
+    #define build_program(code, shaderType) build_named_program(code, shaderType, #code)
+    uint32_t build_named_program(const char *shaderCode, GLenum shaderType, const char *name);
 
     /**
      * @param programId The id of the program to destroy
