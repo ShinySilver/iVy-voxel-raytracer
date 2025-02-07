@@ -1,7 +1,9 @@
 #include "imgui.h"
 #include "ivy_time.h"
+#include "ivy_log.h"
 #include "client/context.h"
 #include "client/gui/chat.h"
+#include "common/console.h"
 
 namespace client::gui::chat {
     namespace {
@@ -61,6 +63,14 @@ namespace client::gui::chat {
                 if (input_buffer[0] != '\0') {
                     if (input_buffer[0] == '/') {
                         // Split line into keywords, and send to the console helper for parsing
+                        const char *tokens[32]; // Maximum 32 tokens
+                        int token_count = 0;
+                        char *token = strtok(input_buffer+1, " ");
+                        while(token && token_count < 32) {
+                            tokens[token_count++] = token;
+                            token = strtok(nullptr, " ");
+                        }
+                        console::parse(tokens);
                     } else {
                         // Add message to chat history
                         chat_history_current += 1;

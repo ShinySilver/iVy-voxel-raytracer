@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstring>
 #include "ivy_log.h"
-#include "server/console.h"
+#include "common/console.h"
 
 namespace console {
 

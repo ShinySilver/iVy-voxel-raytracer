@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <cstring>
-#include "common/heightmap.h"
+#include "heightmap.h"
 
 HeightMap::HeightMap(int resolution_x, int resolution_y) :
         data{(int *) std::malloc(sizeof(int) * resolution_x * resolution_y)}, resolution_x{resolution_x}, resolution_y{resolution_y} { std::memset(data, 0, resolution_x * resolution_y * sizeof(int)); }

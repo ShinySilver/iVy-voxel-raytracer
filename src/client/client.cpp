@@ -6,6 +6,7 @@
 #include "client/gui/chat.h"
 #include "client/renderers/renderer.h"
 #include "client/renderers/experimental_renderer.h"
+#include "client/renderers/experimental_renderer_2.h"
 #include "client/renderers/wide_tree_renderer.h"
 
 namespace client {
@@ -30,8 +31,9 @@ namespace client {
          * Initializing the client
          */
         window = context::init();
-        active_renderer = new renderers::ExperimentalRenderer();
+        //active_renderer = new renderers::ExperimentalRenderer();
         //active_renderer = new renderers::WideTreeRenderer();
+        active_renderer = new renderers::ExperimentalRenderer2();
         context::register_framebuffer_callback(resize_view);
         glfwShowWindow(window);
         info("Client started")
@@ -39,8 +41,8 @@ namespace client {
         /**
          * Forcing a camera pos for benchmarking
          */
-        camera::position = {450, 450, 450};
-        camera::direction = {0.5, -0.75, 0.5};
+        camera::position = {40, 118, 50};
+        camera::direction = {0.499, -0.75, 0.501};
 
         /**
          * Very basic keybindings

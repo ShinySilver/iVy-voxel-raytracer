@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/voxel.h"
+#include "voxel.h"
 
 #define IVY_NODE_WIDTH (4l)
 #define IVY_NODE_WIDTH_SQRT (2)
@@ -12,4 +12,10 @@ class Chunk {
 public:
     void set(int dx, int dy, int dz, Voxel voxel);
     Voxel get(int dx, int dy, int dz) const;
+};
+
+class ChunkStore {
+public:
+    virtual ~ChunkStore() = default;
+    virtual void add_chunk(int dx, int dy, int dz, Chunk *chunk) = 0;
 };

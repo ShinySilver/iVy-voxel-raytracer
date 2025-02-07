@@ -1,11 +1,10 @@
 #pragma once
 
 #include "client/utils/memory_pool.h"
-#include "common/chunk.h"
-#include "common/worldview.h"
+#include "common/world/chunk.h"
 
 namespace client::utils {
-    class WideTree : public WorldView {
+    class WideTree : public ChunkStore {
         MemoryPoolClient &memory_subpool;
         uint32_t root_node = 0;
     public:

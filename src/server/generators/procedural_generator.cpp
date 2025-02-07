@@ -10,7 +10,7 @@ static Chunk *generate_chunk(float *heightmap, int x, int y, int z);
 server::ProceduralGenerator::ProceduralGenerator() = default;
 server::ProceduralGenerator::~ProceduralGenerator() = default;
 
-void server::ProceduralGenerator::generate_view(int rx, int ry, int rz, WorldView& view) {
+void server::ProceduralGenerator::generate_view(int rx, int ry, int rz, ChunkStore& view) {
 
     // Heightmap parameters
     const int height_offset = 64;

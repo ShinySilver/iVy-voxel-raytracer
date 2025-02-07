@@ -1,8 +1,8 @@
 #include <cassert>
 #include <cstring>
 #include "client/utils/wide_tree.h"
-#include "common/voxel.h"
-#include "common/chunk.h"
+#include "common/world/voxel.h"
+#include "common/world/chunk.h"
 #include "server/generators/generator.h"
 #include "client/client.h"
 
