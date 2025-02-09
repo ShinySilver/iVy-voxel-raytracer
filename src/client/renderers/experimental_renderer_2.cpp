@@ -10,7 +10,7 @@
 #include "client/gui/debug.h"
 #include "client/gui/chat.h"
 #include "client/renderers/experimental_renderer_2.h"
-#include "client/shaders/main_pass.glsl"
+#include "client/shaders/experimental_2/main_pass_2.glsl"
 #include "server/server.h"
 #include "server/generators/generator.h"
 
@@ -18,9 +18,7 @@ namespace client::renderers {
 
     ExperimentalRenderer2::ExperimentalRenderer2() : Renderer("64-tree") {
         // Initializing the renderer shader, SSBO and framebuffer
-        char templated_shader_code[sizeof(main_pass_glsl)];
-        snprintf(templated_shader_code, sizeof(main_pass_glsl), main_pass_glsl, 0);
-        main_pass_shader = client::util::build_program(templated_shader_code, GL_COMPUTE_SHADER);
+        main_pass_shader = client::util::build_program(main_pass_glsl, GL_COMPUTE_SHADER);
         glCreateBuffers(1, &memory_pool_SSBO);
         glCreateFramebuffers(1, &framebuffer);
         context::get_framebuffer_size(&framebuffer_resolution_x, &framebuffer_resolution_y);
@@ -50,9 +48,6 @@ namespace client::renderers {
         glUniformMatrix4fv(glGetUniformLocation(main_pass_shader, "view_matrix"), 1, GL_FALSE, &camera::view_matrix[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(main_pass_shader, "projection_matrix"), 1, GL_FALSE, &projection_matrix[0][0]);
         glUniform1ui(glGetUniformLocation(main_pass_shader, "tree_depth"), IVY_REGION_TREE_DEPTH);
-        glUniform1i(glGetUniformLocation(main_pass_shader, "tree_step_limit"), tree_step_limit);
-        glUniform1i(glGetUniformLocation(main_pass_shader, "dda_step_limit"), dda_step_limit);
-        glUniform3f(glGetUniformLocation(main_pass_shader, "sun_direction"), sun_direction.x, sun_direction.y, sun_direction.z);
         glDispatchCompute(GLuint(ceilf(float(framebuffer_resolution_x) / 8.0f)), GLuint(ceilf(float(framebuffer_resolution_y) / 8.0f)), 1);
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         glBlitNamedFramebuffer(framebuffer, 0,

@@ -1,15 +1,12 @@
 #include "debug.h"
-
 #include "imgui.h"
 #include "client/context.h"
 #include "client/camera.h"
 #include "client/gui/chat.h"
 #include "client/client.h"
 #include "server/server.h"
-#include "ivy_log.h"
 
 namespace client::gui::debug {
-
     bool is_enabled = false;
 
     namespace {
@@ -38,7 +35,7 @@ namespace client::gui::debug {
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, {0, 0});
         ImGui::SetNextWindowBgAlpha(0.35f);
         if(averaged_frame_duration == 0.0f) averaged_frame_duration = 1000.0f / io.Framerate;
-        else averaged_frame_duration = 0.99f * averaged_frame_duration + 0.01f * 1000.0f / io.Framerate;
+        else averaged_frame_duration = 0.995f * averaged_frame_duration + 0.005f * 1000.0f / io.Framerate;
         if (ImGui::Begin("Debug", &is_enabled, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
                                                ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoMove)) {
             ImGui::Text("Position: (%.2f; %.2f; %.2f)", client::camera::position.x, client::camera::position.y, client::camera::position.z);

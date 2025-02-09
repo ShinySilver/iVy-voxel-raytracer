@@ -17,8 +17,6 @@ namespace client::renderers {
         GLuint framebuffer = 0, framebuffer_texture = 0;
         glm::mat4 projection_matrix = {};
         client::utils::WideTree view = {};
-        int tree_step_limit = 0, dda_step_limit = 0;
         int framebuffer_resolution_x = 0, framebuffer_resolution_y = 0;
-        glm::vec3 sun_direction = {0.3, 0.3, 1.0};
     };
 }
