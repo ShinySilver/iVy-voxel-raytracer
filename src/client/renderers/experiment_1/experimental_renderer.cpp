@@ -9,12 +9,12 @@
 #include "client/camera.h"
 #include "client/gui/debug.h"
 #include "client/gui/chat.h"
-#include "client/renderers/experimental_renderer.h"
-#include "client/shaders/experimental_1/primary_ray.glsl"
-#include "client/shaders/experimental_1/minpool_horizontal.glsl"
-#include "client/shaders/experimental_1/minpool_vertical.glsl"
-#include "client/shaders/experimental_1/depth_prepass.glsl"
-#include "client/shaders/experimental_1/postprocess_normals.glsl"
+#include "experimental_renderer.h"
+#include "client/shaders/experiment_1/primary_ray.glsl"
+#include "client/shaders/experiment_1/minpool_horizontal.glsl"
+#include "client/shaders/experiment_1/minpool_vertical.glsl"
+#include "client/shaders/experiment_1/depth_prepass.glsl"
+#include "client/shaders/experiment_1/postprocess_normals.glsl"
 #include "server/server.h"
 #include "server/generators/generator.h"
 #include "glm/gtc/type_ptr.hpp"
@@ -38,7 +38,7 @@ namespace client::renderers {
         auto t0 = time_us();
         server::world_generator->generate_view(0, 0, 0, view);
         info("Generated world view in %.2f ms!", double (time_us()-t0)/1e3);
-        glNamedBufferData(memory_pool_SSBO, (long) memory_pool.size(), memory_pool.to_pointer(0), GL_STATIC_COPY);
+        glNamedBufferData(memory_pool_SSBO, (long) memory_pool->size(), memory_pool->to_pointer(0), GL_STATIC_COPY);
     }
 
     ExperimentalRenderer::~ExperimentalRenderer() {

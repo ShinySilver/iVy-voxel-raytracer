@@ -21,7 +21,7 @@ set(CMAKE_SOURCE_DIR src/)
 
 # Defining compilation flags
 set(RELEASE_OPTIONS -O3 -s -flto=auto -march=native -mtune=native -fomit-frame-pointer -fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/=)
-set(DEBUG_OPTIONS -Wall -Wextra -Wpedantic -Wformat=2 -Wtrampolines -Werror -Wno-unused-parameter -Wno-unused-variable)
+set(DEBUG_OPTIONS -Wall -Wextra -Wpedantic -Wformat=2 -Wtrampolines -Werror -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function)
 
 # Defining sources files
 file(GLOB_RECURSE IVY_SOURCES src/**.cpp src/**.glsl libraries/**.cpp libraries/**.c)

@@ -55,7 +55,7 @@ public:
      * Create a new MemoryPoolClient associated with this pool.
      * @return A pointer to the newly created MemoryPoolClient.
      */
-    MemoryPoolClient &create_client();
+    MemoryPoolClient *create_client();
 
     /**
      * Free a MemoryPoolClient, deallocating its memory.

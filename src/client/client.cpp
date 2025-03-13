@@ -5,14 +5,12 @@
 #include "client/gui/debug.h"
 #include "client/gui/chat.h"
 #include "client/renderers/renderer.h"
-#include "client/renderers/experimental_renderer.h"
-#include "client/renderers/experimental_renderer_2.h"
-#include "client/renderers/wide_tree_renderer.h"
+#include "client/renderers/baseline/wide_tree_renderer.h"
 
 namespace client {
 
     Renderer *active_renderer;
-    FastMemoryPool memory_pool = FastMemoryPool();
+    FastMemoryPool *memory_pool;
 
     namespace {
         GLFWwindow *window;
@@ -31,18 +29,17 @@ namespace client {
          * Initializing the client
          */
         window = context::init();
-        //active_renderer = new renderers::ExperimentalRenderer();
-        //active_renderer = new renderers::WideTreeRenderer();
-        active_renderer = new renderers::ExperimentalRenderer2();
+        memory_pool = new FastMemoryPool();
+        active_renderer = new renderers::WideTreeRenderer();
         context::register_framebuffer_callback(resize_view);
         glfwShowWindow(window);
         info("Client started")
 
         /**
-         * Forcing a camera pos for benchmarking
+         * Forcing an initial camera pos for benchmarking
          */
-        camera::position = {40, 118, 50};
-        camera::direction = {0.499, -0.75, 0.501};
+        camera::position = {600, 550, 600};
+        camera::direction = {0.5099, -0.70, 0.5101};
 
         /**
          * Very basic keybindings
@@ -87,6 +84,7 @@ namespace client {
          * Freeing resources before exiting
          */
         delete active_renderer;
+        delete memory_pool;
         context::terminate();
         info("Client stopped")
     }

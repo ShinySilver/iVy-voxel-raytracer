@@ -1,10 +1,11 @@
-const char main_pass_glsl[] = R""(
+//const char main_pass_glsl[] = R""(
 #version 460 core
 
 #define SIZEOF_NODE 12
 #define NODE_WIDTH 4
 #define NODE_WIDTH_SQRT 2
 #define MINI_STEP_SIZE 5e-3f
+#define OUTPUT_TYPE %d // legacy, ignored
 
 layout (local_size_x = 8, local_size_y = 8) in;
 layout (rgba8, binding = 0) uniform restrict writeonly image2D outImage;
@@ -23,15 +24,6 @@ struct Node{
 
 layout (std430, binding = 0) restrict readonly buffer _node_pool{
     Node node_pool[];
-};
-
-const vec3 colors[] = {
-    vec3(1.00, 0.40, 0.40), // DEBUG_RED
-    vec3(0.40, 1.00, 0.40), // DEBUG_GREEN
-    vec3(0.40, 0.40, 1.00), // DEBUG_BLUE
-    vec3(0.55, 0.55, 0.55), // STONE
-    vec3(0.42, 0.32, 0.25), // DIRT
-    vec3(0.30, 0.59, 0.31)  // GRASS
 };
 
 vec3 getRayDir(ivec2 screen_position) {
@@ -57,6 +49,15 @@ float sign11(float x) {
     return x < 0. ? -1. : 1.;
 }
 
+vec3 colors[] = {
+    vec3(1.00, 0.40, 0.40), // DEBUG_RED
+    vec3(0.40, 1.00, 0.40), // DEBUG_GREEN
+    vec3(0.40, 0.40, 1.00), // DEBUG_BLUE
+    vec3(0.55, 0.55, 0.55), // STONE
+    vec3(0.42, 0.32, 0.25), // DIRT
+    vec3(0.30, 0.59, 0.31)  // GRASS
+};
+
 void main() {
     // make sure current thread is inside the window bounds
     if (any(greaterThanEqual(gl_GlobalInvocationID.xy, screen_size))) return;
@@ -68,15 +69,13 @@ void main() {
     const vec3 ray_sign_01 = max(ray_sign_11, 0.);
     vec3 ray_pos = camera_position, step_mask;
 
-    // check if the camera is outside the voxel volume
+    // ray-box intersection to check if the camera is outside the voxel volume
     const float world_width = pow(NODE_WIDTH, tree_depth);
     const vec3 bmin = vec3(MINI_STEP_SIZE), bmax = vec3(world_width-MINI_STEP_SIZE); // Eventually consider adding a MINI_STEP_SIZE
     const float intersect = AABBIntersect(bmin, bmax, camera_position, inverted_ray_dir, step_mask);
 
     // if it is outside the terrain, offset the ray so its starting position is (slightly) in the voxel volume
-    if (intersect > 0) {
-        ray_pos += ray_dir * intersect + step_mask * ray_sign_11 * MINI_STEP_SIZE;
-    }
+    if (intersect > 0)  ray_pos += ray_dir * intersect + step_mask * ray_sign_11 * MINI_STEP_SIZE;
 
     // if the ray does not intersect the world volume, return the sky color
     if (intersect < 0) {
@@ -98,9 +97,11 @@ void main() {
     Node current_node = node_pool[current_node_index];
     stack[depth] = current_node_index;
 
-    // After placing the stack head in the right place, we raytrace!
+    // raytracing!
     do {
-        // For the most part, we are doing the classical DDA algorithm in this do-while loop
+        /************************************************************************************
+         * For the most part, we are doing the classical DDA algorithm in this do-while loop
+         */
         do {
             // check hit
             uvec3 v = (uvec3(ray_pos) & uvec3((node_width * NODE_WIDTH) - 1u)) / uvec3(node_width);
@@ -123,14 +124,16 @@ void main() {
             exited_global = any(greaterThanEqual(ray_pos, bmax)) || any(lessThan(ray_pos, bmin));
         } while(!has_collided && !exited_local && !exited_global);
 
-        // First possible reason for exiting the DDA main loop: we hit something, so we need to either go down or return a color
+        /************************************************************************************************************************
+         * First possible reason for exiting the DDA main loop: we hit something, so we need to either go down or return a color
+         */
         if(has_collided){
             do{
                 // if there is a hit on a voxel in a terminal node: return hit color
                 if((current_node.header & (0x1u << 30)) != 0) {
                     bool is_lod = (current_node.header & (0x1u << 31)) != 0;
-                    uint color_index = is_lod ? current_node.header & ~(0x3u << 30) : 0;
-                    vec3 color = colors[color_index-1]*dot(step_mask*vec3(0.9, 0.7, 0.4), vec3(1));
+                    uint color_index = is_lod ? (current_node.header & ~(0x3u << 30))-1 : 0;
+                    vec3 color = colors[color_index]*dot(step_mask*vec3(0.9, 0.7, 0.4), vec3(1));
                     imageStore(outImage, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1));
                     return;
                 }
@@ -160,23 +163,25 @@ void main() {
             lbmax = lbmin + uvec3(node_width*NODE_WIDTH);
         }
 
-        // Second possible reason for exiting the DDA main loop: we exited the current node, we have to go up
+        /*****************************************************************************************************
+         * Second possible reason for exiting the DDA main loop: we exited the current node, we have to go up
+         */
         else if(exited_local && !exited_global){
             do {
-                // go up
-                current_node_index = stack[depth];
-                current_node = node_pool[current_node_index];
-                depth -= 1;
+            // go up
+            current_node_index = stack[depth];
+            current_node = node_pool[current_node_index];
+            depth -= 1;
 
-                // update node width
-                node_width = node_width << NODE_WIDTH_SQRT;
+            // update node width
+            node_width = node_width << NODE_WIDTH_SQRT;
 
-                // update lbb
-                lbmin = uvec3(lbmin) & uvec3(~(node_width * NODE_WIDTH - 1u));
-                lbmax = lbmin + uvec3(node_width*NODE_WIDTH);
+            // update lbb
+            lbmin = uvec3(lbmin) & uvec3(~(node_width * NODE_WIDTH - 1u));
+            lbmax = lbmin + uvec3(node_width*NODE_WIDTH);
 
-                // check if we're good
-                exited_local = any(greaterThanEqual(ray_pos, lbmax)) || any(lessThan(ray_pos, lbmin));
+            // check if we're good
+            exited_local = any(greaterThanEqual(ray_pos, lbmax)) || any(lessThan(ray_pos, lbmin));
             } while(exited_local);
         }
     } while(!exited_global);

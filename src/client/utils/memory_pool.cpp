@@ -81,9 +81,7 @@ FastMemoryPool::FastMemoryPool(size_t max_size, size_t chunk_size)
 
     base_addr = std::aligned_alloc(64, max_size);
     memset(base_addr, 0, max_size);
-    if (!base_addr) {
-        throw std::bad_alloc();
-    }
+    if (!base_addr) throw std::bad_alloc();
     next = base_addr;
 }
 
@@ -120,10 +118,10 @@ void FastMemoryPool::deallocate(void *ptr) {
     free_blocks.push_back(ptr);
 }
 
-MemoryPoolClient &FastMemoryPool::create_client() {
+MemoryPoolClient *FastMemoryPool::create_client() {
     auto *client = new MemoryPoolClient(this);
     clients.push_back(client);
-    return *client;
+    return client;
 }
 
 void FastMemoryPool::free_client(MemoryPoolClient *client) {
@@ -143,6 +141,7 @@ size_t FastMemoryPool::allocated() {
 }
 
 size_t FastMemoryPool::used() {
+    if(clients.empty()) return 0;
     size_t used_memory = 0;
     for (const auto &client: clients) {
         used_memory += client->get_used_memory();

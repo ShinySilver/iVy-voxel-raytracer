@@ -24,33 +24,33 @@ namespace client::utils {
             uint32_t header = 0;
         };
 
-        void delete_node_recursively(MemoryPoolClient &memory_subpool, Node *node, int depth) {
+        void delete_node_recursively(MemoryPoolClient *memory_subpool, Node *node, int depth) {
             depth += 1;
             if (depth != IVY_REGION_TREE_DEPTH) {
-                Node *child_array = (Node *) memory_subpool.to_pointer(node->header & ~(0b11u << 30));
+                Node *child_array = (Node *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
                 int child_count = __builtin_popcountll(node->bitmap);
                 for (int i = 0; i < child_count; i++) {
                     delete_node_recursively(memory_subpool, &child_array[child_count], depth);
                 }
             } else {
-                auto *child_array = (Voxel *) memory_subpool.to_pointer(node->header & ~(0b11u << 30));
+                auto *child_array = (Voxel *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
                 int child_count = __builtin_popcountll(node->bitmap);
                 for (int i = 0; i < child_count; i++) {
-                    memory_subpool.deallocate(&child_array[child_count], sizeof(Voxel));
+                    memory_subpool->deallocate(&child_array[child_count], sizeof(Voxel));
                 }
             }
         }
     }
 
-    WideTree::WideTree() : memory_subpool{memory_pool.create_client()} {
-        Node *node = (Node *) memory_subpool.allocate(sizeof(Node));
+    WideTree::WideTree() : memory_subpool{memory_pool->create_client()} {
+        Node *node = (Node *) memory_subpool->allocate(sizeof(Node));
         node->header = 0;
         node->bitmap = 0;
-        root_node = memory_subpool.to_index(node);
+        root_node = memory_subpool->to_index(node);
     }
 
     WideTree::~WideTree() {
-        delete_node_recursively(memory_subpool, (Node *) memory_subpool.to_pointer(root_node), 0);
+        delete_node_recursively(memory_subpool, (Node *) memory_subpool->to_pointer(root_node), 0);
     }
 
     uint32_t WideTree::get_root_node() const {
@@ -58,7 +58,7 @@ namespace client::utils {
     }
 
     void WideTree::add_chunk(int dx, int dy, int dz, Chunk *chunk) {
-        Node *node = (Node *) memory_subpool.to_pointer(root_node);
+        Node *node = (Node *) memory_subpool->to_pointer(root_node);
         int child_x, child_y, child_z, depth = 0, node_width = IVY_REGION_WIDTH, child_xyz;
 
         // While we have not reached the target bottom level node, we go down the tree
@@ -91,19 +91,19 @@ namespace client::utils {
                 // The while loop guarantee the current node is not supposed to be terminal. As such, the current node children are nodes of size 12.
 
                 // We extend the child array to have room for the newly created child
-                Node *previous_child_array = (Node *) memory_subpool.to_pointer(node->header & ~(0b11u << 30));
-                Node *new_child_array = (Node *) memory_subpool.allocate((previous_child_count + 1) * int(sizeof(Node)));
+                Node *previous_child_array = (Node *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
+                Node *new_child_array = (Node *) memory_subpool->allocate((previous_child_count + 1) * int(sizeof(Node)));
 
                 // We copy from the previous child array to the new one, while leaving an empty space for the new child.
                 // Then, we don't forget to free the old child array
                 if (previous_child_count != 0) {
                     memcpy(new_child_array, previous_child_array, previous_child_id * sizeof(Node));
                     memcpy(new_child_array + previous_child_id + 1, previous_child_array + previous_child_id, (previous_child_count - previous_child_id) * sizeof(Node));
-                    memory_subpool.deallocate(previous_child_array, int(sizeof(Node)) * previous_child_count);
+                    memory_subpool->deallocate(previous_child_array, int(sizeof(Node)) * previous_child_count);
                 }
 
                 // We place the child array in the current node header
-                node->header = (node->header & (0b11u << 30)) | memory_subpool.to_index(new_child_array);
+                node->header = (node->header & (0b11u << 30)) | memory_subpool->to_index(new_child_array);
 
                 // And at last, we use placement new to create the new subnode that is the new "current" node
                 Node *child = new_child_array + previous_child_id;
@@ -116,7 +116,7 @@ namespace client::utils {
             } else {
                 // If a child exist for the volume we want to write to, we just enter it
                 int previous_child_id = __builtin_popcountll(node->bitmap & ~((~0x0ul) << child_xyz));
-                Node *child_array = (Node *) memory_subpool.to_pointer(node->header & ~(0b11u << 30));
+                Node *child_array = (Node *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
                 node = &child_array[previous_child_id];
             }
         }
@@ -128,8 +128,8 @@ namespace client::utils {
         if (node->bitmap != 0 && (node->header & (0b10u << 30)) == 0) {
             int child_count = __builtin_popcountll(node->bitmap);
             node->bitmap = 0;
-            Node *child_array = (Node *) memory_subpool.to_pointer(node->header & ~(0b11u << 30));
-            memory_subpool.deallocate(child_array, int(child_count * sizeof(Voxel)));
+            Node *child_array = (Node *) memory_subpool->to_pointer(node->header & ~(0b11u << 30));
+            memory_subpool->deallocate(child_array, int(child_count * sizeof(Voxel)));
         }
 
         // Now that we know for sure that the node has no existing allocation, we can write into it. First, we assemble the bitmask...
@@ -157,8 +157,8 @@ namespace client::utils {
         } else {
             // If it's not, we allocate a voxel array, place it in the header, and set the voxels.
             int child_count = __builtin_popcountll(node->bitmap);
-            auto *child_array = (Voxel *) memory_subpool.allocate(int(child_count * sizeof(Voxel)));
-            node->header = memory_subpool.to_index(child_array);
+            auto *child_array = (Voxel *) memory_subpool->allocate(int(child_count * sizeof(Voxel)));
+            node->header = memory_subpool->to_index(child_array);
             int index = 0;
             for (child_z = 0; child_z < IVY_NODE_WIDTH; child_z++) {
                 for (child_y = 0; child_y < IVY_NODE_WIDTH; child_y++) {

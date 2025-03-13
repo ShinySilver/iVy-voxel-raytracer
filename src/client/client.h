@@ -5,7 +5,7 @@
 
 namespace client {
     extern Renderer *active_renderer;
-    extern FastMemoryPool memory_pool;
+    extern FastMemoryPool *memory_pool;
     void start();
     void terminate();
 }

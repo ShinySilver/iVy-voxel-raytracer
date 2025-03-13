@@ -5,7 +5,7 @@
 
 namespace client::utils {
     class WideTree : public ChunkStore {
-        MemoryPoolClient &memory_subpool;
+        MemoryPoolClient *memory_subpool;
         uint32_t root_node = 0;
     public:
         WideTree();

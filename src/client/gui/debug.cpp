@@ -44,8 +44,8 @@ namespace client::gui::debug {
             ImGui::Text("Window resolution: %dx%d (%s)", x, y, context::is_fullscreen() ? "Fullscreen" : "Windowed");
             context::get_framebuffer_size(&x, &y);
             ImGui::Text("Framebuffer resolution: %dx%d", x, y);
-            ImGui::Text("Memory-pool allocation: %.2lf MiB", (double) memory_pool.allocated() / 1024.0 / 1024.0);
-            ImGui::Text("Memory-pool usage: %.2lf MiB", (double) memory_pool.used() / 1024.0 / 1024.0);
+            ImGui::Text("Memory-pool allocation: %.2lf MiB", (double) memory_pool->allocated() / 1024.0 / 1024.0);
+            ImGui::Text("Memory-pool usage: %.2lf MiB", (double) memory_pool->used() / 1024.0 / 1024.0);
             ImGui::Text("Worldgen: %s", server::world_generator->get_name());
             ImGui::Text("Chat: %s", chat::is_enabled ? "Opened" : "Closed");
             ImGui::Text("Framerate: %.0f FPS (~%.2f ms/frame)", io.Framerate, averaged_frame_duration);
